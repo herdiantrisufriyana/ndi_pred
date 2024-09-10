@@ -7,7 +7,7 @@ Modify Dockerfile according to AMD64 or ARM64.
 https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh
 
-Change `$(pwd)` to the absolute path of the project folder.
+Change `$(pwd)` with the absolute path of the project folder.
 
 ```{bash}
 docker build -t ndi_pred --load .
