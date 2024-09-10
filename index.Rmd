@@ -1,0 +1,178 @@
+---
+title: "Neonatal Outcomes AI Prediction using Multimodal Trajectory Database"
+author: "Herdiantri Sufriyana, Chao-Ching Huang, Emily Chia-Yu Su"
+date: "2024-09-10"
+output: html_document
+---
+
+# Programming environment
+
+```{r Set random seed, include=FALSE, paged.print=FALSE}
+seed <- 2024-09-10
+```
+
+```{r Load R packages, include=FALSE}
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(ggpubr)
+library(readxl)
+```
+
+```{r Load custom functions, include=FALSE}
+lapply(list.files("R/", pattern = "-function.R", full.names = TRUE), source)
+```
+
+```{r Set theme, include=FALSE}
+dslabs::ds_theme_set()
+kable_format <- "html"
+```
+
+# Load raw data
+
+```{r List raw data paths, include=FALSE}
+paths_old_name <-
+  list.files(
+    "inst/extdata/2011-202312_GA_22-30_838"
+    , pattern = "\\.xlsx$"
+    , full.names = TRUE
+  )
+```
+
+```{r Write raw data path old names, eval=FALSE, include=FALSE}
+data.frame(name = NA, path = paths_old_name)  |>
+  write_csv("inst/extdata/paths_old_name.csv")
+```
+
+```{r Read raw data path new names, include=FALSE}
+paths_new_name <-
+  read_csv("inst/extdata/paths_new_name.csv", show_col_types = FALSE)
+```
+
+```{r table-1, echo=FALSE}
+paths_new_name |>
+  kable(
+    caption = "Table 1. Raw data names and paths"
+    , format = kable_format
+  ) |>
+  kable_classic() |>
+  column_spec(1:2, extra_css = "vertical-align:top;")
+```
+
+```{r Read raw data, include=FALSE}
+raw_data <-
+  paths_new_name$path |>
+  `names<-`(paths_new_name$name) |>
+  lapply(read_xlsx, sheet = 1)
+```
+
+```{r List raw data colnames, include=FALSE}
+raw_data_old_colname <-
+  raw_data |>
+  imap(
+    ~ data.frame(
+        table = .y
+        , old_colname = colnames(.x)
+        , new_colname = NA
+      )
+  ) |>
+  reduce(rbind)
+```
+
+```{r Write raw data old colnames, include=FALSE}
+raw_data_old_colname |>
+  write_csv("inst/extdata/raw_data_old_colname.csv")
+```
+
+```{r Read raw data new colnames, include=FALSE}
+raw_data_new_colname <-
+  read_csv("inst/extdata/raw_data_new_colname.csv", show_col_types = FALSE)
+```
+
+```{r Modify column names, include=FALSE}
+raw_data1 <-
+  raw_data |>
+  imap(
+    ~ .x |>
+      `colnames<-`(
+        data.frame(table = .y, old_colname = colnames(.x)) |>
+          left_join(raw_data_new_colname, by = join_by(table, old_colname)) |>
+          mutate(
+            new_colname =
+              ifelse(is.na(new_colname), old_colname, new_colname)
+          ) |>
+          pull(new_colname)
+      )
+  )
+```
+
+```{r Join raw data tables accordingly, include=FALSE}
+raw_data2 <-
+  raw_data1[!str_detect(names(raw_data1), "42d$|6w$")] |>
+  reduce(\(x, y) left_join(x, y, by = join_by(id))) |>
+  right_join(
+    raw_data1[str_detect(names(raw_data1), "6w$")] |>
+      reduce(\(x, y) left_join(x, y, by = join_by(id, t_wk)))
+    , by = join_by(id, ga_wk)
+  ) |>
+  right_join(
+    raw_data1[str_detect(names(raw_data1), "42d$")] |>
+      reduce(\(x, y) left_join(x, y, by = join_by(id, t_day))) |>
+      mutate(t_wk = ceiling(t_day / 7))
+    , by = join_by(id, t_wk)
+  ) |>
+  select(-t_wk) |>
+  select(id, t = t_day, everything())
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
