@@ -5,7 +5,7 @@ Modify Dockerfile according to AMD64 or ARM64.
 https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh
 
-Change `project_template` to the project image name.
+Change `project_template` and `$(pwd)` to the project image name and the absolute path of the project folder.
 
 ```{bash}
 docker build -t project_template --load .
