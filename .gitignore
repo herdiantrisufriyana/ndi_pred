@@ -48,18 +48,6 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 
-# Ignore Rstudio project files
-*.Rproj
-
-# Ignore everything in archive
-archive/*
-
-# Ignore everything in renv
-renv/*
-
-# But don't ignore these files in renv
-!renv/activate.R
-!renv/settings.json
-
-# Ignore everything in virtual env
-conda_env/*
+# Ignore raw data
+inst/extdata/2011-202312_GA_22-30_838/*
+inst/extdata/Neonatal outcome AI prediction_多維軌跡資料數據盤點 NCKU-TMU_20240813.docx
