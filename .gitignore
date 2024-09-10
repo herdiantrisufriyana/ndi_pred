@@ -51,3 +51,6 @@ rsconnect/
 # Ignore raw data
 inst/extdata/2011-202312_GA_22-30_838/*
 inst/extdata/Neonatal outcome AI prediction_多維軌跡資料數據盤點 NCKU-TMU_20240813.docx
+
+# Ignore local file/folders
+.local/
