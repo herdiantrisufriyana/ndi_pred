@@ -54,3 +54,4 @@ inst/extdata/Neonatal outcome AI prediction_多維軌跡資料數據盤點 NCKU-
 
 # Ignore local file/folders
 .local/
+.config/
