@@ -52,7 +52,7 @@ paths_new_name <-
 ```{r table-1, echo=FALSE}
 paths_new_name |>
   kable(
-    caption = "Table 1. Raw data names and paths"
+    caption = "Table 1. Raw data names and paths."
     , format = kable_format
   ) |>
   kable_classic() |>
@@ -65,6 +65,10 @@ raw_data <-
   `names<-`(paths_new_name$name) |>
   lapply(read_xlsx, sheet = 1)
 ```
+
+# Data preprocessing
+
+## Data cleaning
 
 ```{r List raw data colnames, include=FALSE}
 raw_data_old_colname <-
@@ -79,7 +83,7 @@ raw_data_old_colname <-
   reduce(rbind)
 ```
 
-```{r Write raw data old colnames, include=FALSE}
+```{r Write raw data old colnames, eval=FALSE, include=FALSE}
 raw_data_old_colname |>
   write_csv("inst/extdata/raw_data_old_colname.csv")
 ```
@@ -87,6 +91,17 @@ raw_data_old_colname |>
 ```{r Read raw data new colnames, include=FALSE}
 raw_data_new_colname <-
   read_csv("inst/extdata/raw_data_new_colname.csv", show_col_types = FALSE)
+```
+
+```{r table-2, echo=FALSE}
+raw_data_new_colname |>
+  mutate(table = ifelse(duplicated(table), "", table)) |>
+  kable(
+    caption = "Table 2. Raw data old and new column names."
+    , format = kable_format
+  ) |>
+  kable_classic() |>
+  column_spec(1:2, extra_css = "vertical-align:top;")
 ```
 
 ```{r Modify column names, include=FALSE}
@@ -125,13 +140,163 @@ raw_data2 <-
   select(id, t = t_day, everything())
 ```
 
+```{r List raw data variable-types, include=FALSE}
+variable_old_type <-
+  data.frame(
+    variable = colnames(raw_data2)
+    , old_type = sapply(raw_data2, class)
+    , new_type = NA
+  )
+```
 
+```{r Write old variable-types, eval=FALSE, include=FALSE}
+variable_old_type |>
+  write_csv("inst/extdata/variable_old_type.csv")
+```
 
+```{r Read new variable-types, include=FALSE}
+variable_new_type <-
+  read_csv("inst/extdata/variable_new_type.csv", show_col_types = FALSE)
+```
 
+```{r table-3, echo=FALSE}
+variable_new_type |>
+  kable(
+    caption = "Table 3. Raw data old and new variable types."
+    , format = kable_format
+  ) |>
+  kable_classic() |>
+  column_spec(1:2, extra_css = "vertical-align:top;")
+```
 
+```{r Modify variable-types, include=FALSE}
+raw_data3 <-
+  raw_data2 |>
+  imap(
+    ~ data.frame(
+        value =
+          ifelse(
+            filter(variable_new_type, variable == .y)$new_type != "numeric"
+            ,as.character
+            ,as.numeric
+          )(.x)
+      ) |>
+      `colnames<-`(.y)
+  ) |>
+  reduce(cbind)
 
+raw_data3 <-
+  unique(variable_new_type$new_type) |>
+  `names<-`(unique(variable_new_type$new_type)) |>
+  imap(
+    ~ raw_data3 |>
+      select_at(filter(variable_new_type, new_type == .x)$variable)
+  )
+```
 
+```{r List raw data categories, include=FALSE}
+raw_data_old_cat <-
+  raw_data3$factor |>
+  lapply(unique) |>
+  lapply(sort) |>
+  imap(~ data.frame(colname = .y, old_cat = .x, new_cat = NA)) |>
+  reduce(rbind) |>
+  mutate_at("colname", \(x) factor(x, unique(x)))
+```
 
+```{r Write raw data old categories, eval=FALSE, include=FALSE}
+raw_data_old_cat |>
+  write_csv("inst/extdata/raw_data_old_cat.csv")
+```
+
+```{r Read raw data new categories, include=FALSE}
+raw_data_new_cat <-
+  read_csv("inst/extdata/raw_data_new_cat.csv", show_col_types = FALSE) |>
+  mutate_at("old_cat", as.character)
+```
+
+```{r table-4, echo=FALSE}
+raw_data_new_cat |>
+  kable(
+    caption = "Table 4. Raw data old and new categories."
+    , format = kable_format
+  ) |>
+  kable_classic() |>
+  column_spec(1:2, extra_css = "vertical-align:top;")
+```
+
+```{r Modify categories, include=FALSE}
+raw_data4 <- raw_data3
+
+raw_data4$factor <-
+  raw_data4$factor |>
+  mutate(seq = seq(n())) |>
+  gather(colname, old_cat, -seq) |>
+  mutate_at("colname", \(x) factor(x, unique(x))) |>
+  left_join(raw_data_new_cat, by = join_by(colname, old_cat)) |>
+  select(-old_cat) |>
+  spread(colname, new_cat) |>
+  arrange(seq) |>
+  select(-seq) |>
+  mutate_all(as.factor)
+
+raw_data4 <-
+  raw_data4 |>
+  reduce(cbind) |>
+  select_at(colnames(raw_data2))
+```
+
+## Numerical data transformation
+
+```{r Normal QQ plots of numeric variables, include=FALSE}
+normal_qq <-
+  raw_data4$numeric |>
+  imap(
+    ~ data.frame(value = .x) |>
+      ggplot(aes(sample = value)) +
+      stat_qq(na.rm = TRUE) +
+      stat_qq_line(color = "red", na.rm = TRUE) +
+      coord_flip() +
+      xlab("Normal Quantiles") +
+      ylab(.y)
+  )
+
+normal_qq <-
+  normal_qq |>
+  length() |>
+  seq() |>
+  split(LETTERS[1:3]) |>
+  data.frame() |>
+  pmap(
+    \(A, B, C)
+    ggarrange(
+      normal_qq[[A]]
+      ,normal_qq[[B]]
+      ,normal_qq[[C]]
+      ,ncol = 3
+    )
+  )
+
+normal_qq <-
+  ggarrange(
+    normal_qq[[1]]
+    ,normal_qq[[2]]
+    ,normal_qq[[3]]
+    ,normal_qq[[4]]
+    ,normal_qq[[5]]
+    ,normal_qq[[6]]
+    ,normal_qq[[7]]
+    ,normal_qq[[8]]
+    ,normal_qq[[9]]
+    ,normal_qq[[10]]
+    ,ncol = 1
+    ,nrow = 10
+  )
+```
+
+```{r figure-1, echo=FALSE, fig.height=50, fig.width=15}
+normal_qq
+```
 
 
 
