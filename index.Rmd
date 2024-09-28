@@ -17,6 +17,20 @@ library(knitr)
 library(kableExtra)
 library(ggpubr)
 library(readxl)
+library(broom)
+library(MASS)
+select <- dplyr::select
+library(igraph)
+library(ggnetwork)
+library(brms)
+library(broom.mixed)
+library(pbapply)
+library(mice)
+filter <- dplyr::filter
+cbind <- base::cbind
+rbind <- base::rbind
+library(parallel)
+library(doParallel)
 ```
 
 ```{r Load custom functions, include=FALSE}
@@ -246,20 +260,227 @@ raw_data4 <-
   select_at(colnames(raw_data2))
 ```
 
+```{r table-5, eval=FALSE, include=FALSE}
+raw_data4 |>
+  select(id, survive, death_age) |>
+  unique() |>
+  mutate(ms_death_age = is.na(death_age)) |>
+  group_by(survive, ms_death_age) |>
+  summarize(n = n(), .groups = "drop") |>
+  kable(
+    caption = "Table 5. Consistency check - survival and age of death."
+    , format = kable_format
+  ) |>
+  kable_classic() |>
+  column_spec(1:3, extra_css = "vertical-align:top;")
+```
+
+```{r table-6, eval=FALSE, include=FALSE}
+raw_data4 |>
+  select_at(colnames(raw_data1$outcomes)) |>
+  unique() |>
+  select(-id, -survive) |>
+  mutate_all(\(x) ifelse(is.na(x), "missing", "non-missing")) |>
+  rename_all(\(x) paste0("ms_", x)) |>
+  gather(variable, value, -ms_death_age) |>
+  group_by(ms_death_age, variable, value) |>
+  summarize(n = n(), .groups = "drop") |>
+  spread(value, n, fill = 0) |>
+  mutate(ms_death_age = ifelse(duplicated(ms_death_age), "", ms_death_age)) |>
+  kable(
+    caption = "Table 6. Consistency check - other outcomes and age of death."
+    , format = kable_format
+  ) |>
+  kable_classic() |>
+  column_spec(1:3, extra_css = "vertical-align:top;")
+```
+
+```{r table-7, eval=FALSE, include=FALSE}
+list(
+    ceiled = mutate(raw_data4, t_death_age = ceiling(death_age))
+    , rounded_plus1 = mutate(raw_data4, t_death_age = round(death_age) + 1)
+    , floored_plus1 = mutate(raw_data4, t_death_age = floor(death_age) + 1)
+  ) |>
+  imap(
+    ~ .x |>
+      filter(survive == levels(survive)[1]) |>
+      select_if(
+        !colnames(.x)
+        %in% c(
+          colnames(select(raw_data1$demographic_surfactant_growth, -id))
+          , colnames(select(raw_data1$outcomes, -id, -death_age))
+          , colnames(select(raw_data1$morbidities_42d, -id))
+        )
+      ) |>
+      mutate(
+        t_wk = ceiling(t / 7)
+        , t_wk_death_age = ceiling(t_death_age / 7)
+      ) |>
+      mutate(
+        t_alive = ifelse(t <= t_death_age, "1-yes", "0-no")
+        , t_wk_alive = ifelse(t_wk <= t_wk_death_age, "1-yes", "0-no")
+      ) |>
+      select(-death_age, -t_death_age, -t_wk_death_age) |>
+      select(id, t, t_wk, t_alive, t_wk_alive, everything()) |>
+      mutate_at(
+        vars(-id, -t, -t_wk, -t_alive, -t_wk_alive)
+        , \(x) ifelse(is.na(x), "missing", "non-missing")
+      ) |>
+      gather(variable, value, -id, -t, -t_wk, -t_alive, -t_wk_alive) |>
+      mutate(
+        t =
+          ifelse(
+            variable
+            %in% unlist(
+              lapply(raw_data1[str_detect(names(raw_data1), "6w$")], colnames)
+            )
+            , t_wk
+            , t
+          ) |>
+          factor()
+        , t_alive =
+          ifelse(
+            variable
+            %in% unlist(
+              lapply(raw_data1[str_detect(names(raw_data1), "6w$")], colnames)
+            )
+            , t_wk_alive
+            , t_alive
+          ) |>
+          factor()
+      ) |>
+      select(-t_wk, -t_wk_alive) |>
+      unique() |>
+      mutate(
+        variable = paste0("ms_", variable)
+        ,variable = factor(variable, unique(variable))
+      ) |>
+      mutate(t_death_age_def = .y)
+  ) |>
+  reduce(rbind) |>
+  mutate(t_death_age_def = factor(t_death_age_def, unique(t_death_age_def))) |>
+  group_by(t_death_age_def, t_alive, variable, value) |>
+  summarize(n = n(), .groups = "drop") |>
+  spread(value, n, fill = 0) |>
+  mutate(
+    t_alive = as.character(t_alive)
+    , t_alive =
+      ifelse(
+        duplicated(paste0(t_death_age_def, t_alive))
+        , ""
+        , t_alive
+      )
+    , t_death_age_def = as.character(t_death_age_def)
+    , t_death_age_def = ifelse(duplicated(t_death_age_def), "", t_death_age_def)
+  ) |>
+  kable(
+    caption =
+      "Table 7. Consistency check - time-dependent variables and age of death."
+    , format = kable_format
+  ) |>
+  kable_classic() |>
+  column_spec(1:5, extra_css = "vertical-align:top;")
+```
+
+```{r Filter data up to death age if not survive, include=FALSE}
+raw_data5 <-
+  raw_data4 |>
+  filter(is.na(death_age) | t <= (round(death_age) + 1))
+```
+
+```{r Finalize cleaned data, include=FALSE}
+cleaned_data <- raw_data5
+```
+
+## Data partition
+
+```{r Split data for each GA (week), include=FALSE}
+# Determine whole set
+whole_set <-
+  cleaned_data |>
+  select(id, ga_wk) |>
+  unique()
+
+# Split data by GA (week)
+whole_id <-
+  whole_set |>
+  pull(ga_wk) |>
+  unique() |>
+  sort() |>
+  lapply(\(x) filter(whole_set, ga_wk == x)$id)
+
+
+# GA-wise partitioning
+train_id <- list()
+val_id <- list()
+test_id <- list()
+
+for(i in seq(length(whole_id))){
+  set.seed(seed)
+  
+  test_id[[i]] <-
+    whole_id[[i]] |>
+    sample(size = round(0.2 * length(whole_id[[i]])), replace = FALSE)
+  
+  train_id[[i]] <- setdiff(whole_id[[i]], test_id[[i]])
+  
+  set.seed(seed)
+  
+  val_id[[i]] <-
+    train_id[[i]] |>
+    sample(size = round(0.2 * length(train_id[[i]])), replace = FALSE)
+  
+  train_id[[i]] <- setdiff(train_id[[i]], val_id[[i]])
+}
+
+whole_id <- reduce(whole_id, c)
+train_id <- reduce(train_id, c)
+val_id <- reduce(val_id, c)
+test_id <- reduce(test_id, c)
+```
+
+```{r figure-1, include=FALSE}
+whole_set |>
+    mutate(
+    set =
+      case_when(
+        id %in% train_id ~ "training"
+        ,id %in% val_id ~ "validation"
+        ,id %in% test_id ~ "test"
+      ) |>
+      factor(c("training", "validation", "test"))
+  ) |>
+  ggplot(aes(ga_wk)) +
+  geom_histogram(binwidth = 1, color = "white") +
+  facet_grid(set ~ ., scales = "free_y") +
+  scale_x_continuous(breaks = seq(22, 30)) +
+  theme(strip.text.y = element_text(angle = 0))
+```
+
+Figure 1. GA (week) distribution for each partition. GA, gestational week.
+
+```{r Finalize inference data, include=FALSE}
+infer_data <-
+  cleaned_data |>
+  filter(id %in% train_id)
+```
+
 ## Numerical data transformation
+
+```{r Separate categorical and numerical variables, include=FALSE}
+cat_data <-
+  infer_data |>
+  select_if(!sapply(infer_data, is.numeric))
+
+num_data <-
+  infer_data |>
+  select_if(sapply(infer_data, is.numeric))
+```
 
 ```{r Normal QQ plots of numeric variables, include=FALSE}
 normal_qq <-
-  raw_data4$numeric |>
-  imap(
-    ~ data.frame(value = .x) |>
-      ggplot(aes(sample = value)) +
-      stat_qq(na.rm = TRUE) +
-      stat_qq_line(color = "red", na.rm = TRUE) +
-      coord_flip() +
-      xlab("Normal Quantiles") +
-      ylab(.y)
-  )
+  num_data |>
+  imap(~ qq_plot_outlier(.x, .y))
 
 normal_qq <-
   normal_qq |>
@@ -271,32 +492,846 @@ normal_qq <-
     \(A, B, C)
     ggarrange(
       normal_qq[[A]]
-      ,normal_qq[[B]]
-      ,normal_qq[[C]]
-      ,ncol = 3
+      , normal_qq[[B]]
+      , normal_qq[[C]]
+      , ncol = 3
     )
   )
 
 normal_qq <-
   ggarrange(
     normal_qq[[1]]
-    ,normal_qq[[2]]
-    ,normal_qq[[3]]
-    ,normal_qq[[4]]
-    ,normal_qq[[5]]
-    ,normal_qq[[6]]
-    ,normal_qq[[7]]
-    ,normal_qq[[8]]
-    ,normal_qq[[9]]
-    ,normal_qq[[10]]
-    ,ncol = 1
-    ,nrow = 10
+    , normal_qq[[2]]
+    , normal_qq[[3]]
+    , normal_qq[[4]]
+    , normal_qq[[5]]
+    , normal_qq[[6]]
+    , normal_qq[[7]]
+    , normal_qq[[8]]
+    , normal_qq[[9]]
+    , normal_qq[[10]]
+    , ncol = 1
+    , nrow = 10
   )
 ```
 
-```{r figure-1, echo=FALSE, fig.height=50, fig.width=15}
+```{r figure-2, echo=FALSE, fig.height=50, fig.width=15}
 normal_qq
 ```
+
+Figure 2. QQ plot of numerical variables. QQ, quantile-to-quantile.
+
+```{r Determine normality by QQ plot, include=FALSE}
+var_num_normal_qq <-
+  c("t"
+    , "maternal_age"
+    , "gravida"
+    , "bbw_g"
+    , "ga_wk"
+    , "as1"
+    , "as5"
+    , "resuscitation_at_birth"
+    , "steroid_antenatal"
+    , "surfactant"
+    , "bbw_z"
+    , "bhc_z"
+    , "resp_supp_agg_cum_day_qw"
+    , "fio2_cum_day_qw"
+    , "fio2_cum_level_qw"
+    , "resp_supp_agg_cum_day_pct"
+    , "fio2_cum_day_pct"
+    , "fio2_cum_level_pct"
+    , "steroid_postnatal"
+    , "inotropic"
+    , "blood_volume"
+    , "transfusion"
+    , "blood_culture"
+    , "plt"
+    , "wbc"
+    , "feeding"
+    , "nec"
+    , "aki"
+  )
+```
+
+```{r Numerical variables with normal distribution by QQ plots, echo=FALSE}
+var_num_normal_qq |>
+  paste0(collapse=', ') |>
+  cat()
+```
+
+```{r Normality test of numerical variables, include=FALSE}
+normal_test <-
+  num_data |>
+  select_if(!names(num_data) %in% var_num_normal_qq) |>
+  lapply(
+    \(x)
+    suppressWarnings(
+        ks.test(
+          x
+          , y = "pnorm"
+          , mean = mean(x, na.rm = TRUE)
+          , sd = sd(x, na.rm = TRUE)
+        )
+      )
+  ) |>
+  lapply(tidy) |>
+  imap(~ mutate(.x, variable = .y)) |>
+  lapply(select, variable, everything()) |>
+  reduce(rbind)
+```
+
+```{r table-8, echo=FALSE}
+normal_test |>
+  select(-method) |>
+  mutate_at("statistic", round, 3) |>
+  arrange(p.value) |>
+  mutate(variable = paste0(variable, ifelse(p.value<=0.05,"*",""))) |>
+  mutate(p.value = ifelse(p.value<0.001, "<0.001", round(p.value,3))) |>
+  kable(
+    caption = "Table 8. Normality test."
+    , format = kable_format
+  ) |>
+  footnote("*, p-value <=0.05, Shapiro-Wilk normality test.") |>
+  kable_classic() |>
+  column_spec(1:4, extra_css = "vertical-align:top;")
+```
+
+```{r Determine num variables that are not normally distributed, include=FALSE}
+var_num_non_normal <-
+  normal_test |>
+  filter(p.value <= 0.05) |>
+  pull(variable)
+```
+
+```{r Numerical variables that are not normally distributed, echo=FALSE}
+var_num_non_normal |>
+  paste0(collapse=', ') |>
+  cat()
+```
+
+```{r Non-normal mumerical variables with 0, include=FALSE}
+var_num_non_normal_with_zero <-
+  num_data |>
+  select_at(var_num_non_normal) |>
+  lapply(\(x) x[!duplicated(x)]) |>
+  lapply(\(x) x[!is.na(x)]) |>
+  sapply(\(x) any(x==0)) |>
+  which() |>
+  names()
+```
+
+```{r Non-normal mumerical variables with <0, include=FALSE}
+var_num_non_normal_with_neg <-
+  num_data |>
+  select_at(var_num_non_normal) |>
+  lapply(\(x) x[!duplicated(x)]) |>
+  lapply(\(x) x[!is.na(x)]) |>
+  sapply(\(x) any(x<0)) |>
+  which() |>
+  names()
+```
+
+```{r Non-normal mumerical variables infinited exp, include=FALSE}
+var_num_non_normal_with_inf_exp <-
+  num_data |>
+  select_at(var_num_non_normal) |>
+  lapply(\(x) x[!duplicated(x)]) |>
+  lapply(\(x) x[!is.na(x)]) |>
+  sapply(\(x) any(is.infinite(exp(x)))) |>
+  which() |>
+  names()
+```
+
+```{r Determine choices for a transformation technique, include=FALSE}
+trans_choice <-
+  data.frame(variable = var_num_non_normal) |>
+  mutate(
+    log =
+      ifelse(
+        variable%in%var_num_non_normal_with_zero
+        | variable%in%var_num_non_normal_with_neg
+        , 0
+        , 1
+      )
+    ,sqrt =
+      ifelse(
+        variable%in%var_num_non_normal_with_neg
+        , 0
+        , 1
+      )
+    ,inv =
+      ifelse(
+        variable%in%var_num_non_normal_with_zero
+        | variable%in%var_num_non_normal_with_neg
+        , 0
+        , 1
+      )
+    ,log2 =
+      ifelse(
+        variable%in%var_num_non_normal_with_zero
+        | variable%in%var_num_non_normal_with_neg
+        , 0
+        , 1
+      )
+    ,exp =
+      ifelse(
+        variable%in%var_num_non_normal_with_inf_exp
+        , 0
+        , 1
+      )
+    ,asinh = 1
+    ,bct =
+      ifelse(
+        variable%in%var_num_non_normal_with_zero
+        | variable%in%var_num_non_normal_with_neg
+        , 0
+        , 1
+      )
+  )
+```
+
+```{r Choices for a transformation technique, echo=FALSE}
+trans_choice |>
+  colnames() |>
+  setdiff("variable") |>
+  paste0(collapse=', ') |>
+  cat()
+```
+
+```{r Simple transformations, include=FALSE}
+simple_trans <-
+  trans_choice |>
+  gather(func, do, -variable) |>
+  filter(do == 1) |>
+  select(-do) |>
+  filter(!func %in% c("bct"))
+
+simple_trans <-
+  simple_trans |>
+  pull(func) |>
+  unique() |>
+  lapply(
+    \(x)
+    simple_trans |>
+      filter(func == x) |>
+      pull(variable) |>
+      lapply(
+        \(y)
+        list(
+            log = log
+            , sqrt = sqrt
+            , inv = \(x) 1/x
+            , log2 = log2
+            , exp = exp
+            , asinh = asinh
+          )[[x]](num_data[[y]]) |>
+          as.data.frame() |>
+          `colnames<-`(y)
+      ) |>
+       `names<-`(
+         simple_trans |>
+          filter(func == x) |>
+          pull(variable)
+       )
+  ) |>
+  `names<-`(unique(simple_trans$func))
+```
+
+```{r Box-Cox transformation (BCT), include=FALSE}
+bc_trans <-
+  trans_choice |>
+  gather(func, do, -variable) |>
+  filter(do == 1) |>
+  select(-do) |>
+  filter(func %in% c("bct")) |>
+  pull(variable)
+
+bc_trans <-
+  bc_trans |>
+  `names<-`(as.character(bc_trans)) |>
+  as.list()
+
+for(i in names(bc_trans)){
+  bc_trans[[i]]=
+    boxcox(
+      lm(num_data[[i]] ~ 1)
+      , lambda = seq(-2, 2, by = 0.1)
+      , plot = F
+    ) |>
+    c(list(value = num_data[[i]]))
+}
+
+rm(i)
+
+bc_trans=
+  bc_trans |>
+  lapply(
+    \(x)
+    list(
+      rep(NA, length(x$value))
+       ,(x$value^(x$x[which.max(x$y)]) - 1) / x$x[which.max(x$y)]
+    )[[ifelse(abs(x$x[which.max(x$y)]) < 1e-10, 1, 2)
+    ]]
+  ) |>
+  imap(
+    ~ data.frame(trans=.x) |>
+      `colnames<-`(.y)
+  )
+
+bc_trans <-
+  bc_trans[sapply(bc_trans, \(x) !all(is.na(x[[1]])))]
+```
+
+```{r Normality test of transformed numerical variables, include=FALSE}
+normal_test_after_trans <-
+  simple_trans |>
+  c(list(bct = bc_trans)) |>
+  imap(
+    ~ .x |>
+      lapply(
+        \(x)
+        suppressWarnings(
+            ks.test(
+              x[[1]]
+              , y = "pnorm"
+              , mean = mean(x[[1]], na.rm = TRUE)
+              , sd = sd(x[[1]], na.rm = TRUE)
+            )
+          )
+      ) |>
+      lapply(tidy) |>
+      imap(~ mutate(.x, variable = .y)) |>
+      reduce(rbind) |>
+      mutate(func = .y)
+  ) |>
+  reduce(rbind) |>
+  select(func, variable, p.value) |>
+  mutate_at("func", \(x) factor(x, unique(x))) |>
+  group_by(variable) |>
+  mutate(best_trans = func[which.max(p.value)]) |>
+  ungroup() |>
+  spread(func, p.value) |>
+  right_join(
+    data.frame(variable = var_num_non_normal)
+    , by = join_by(variable)
+  ) |>
+  mutate(
+    p.value=
+      ifelse(
+        best_trans == "log"
+        , log
+        , ifelse(
+          best_trans == "sqrt"
+          , sqrt
+          , ifelse(
+            best_trans == "inv"
+            , inv
+            , ifelse(
+              best_trans == "log2"
+              , log2
+              , ifelse(
+                best_trans == "exp"
+                , exp
+                , ifelse(
+                  best_trans == "asinh"
+                  , asinh
+                  , bct
+                )
+              )
+            )
+          )
+        )
+      )
+  ) |>
+  select(variable, best_trans, p.value, everything())
+```
+
+```{r table-9, echo=FALSE}
+normal_test_after_trans |>
+  mutate(variable = paste0(variable, ifelse(p.value <= 0.05, "*", ""))) |>
+  arrange(p.value) |>
+  mutate_if(is.numeric, \(x) ifelse(x < 0.001, "<0.001", round(x, 3))) |>
+  mutate_if(is.numeric, as.character) |>
+  kable(
+    caption = "Table 9. Normality test after transformation."
+    , format = kable_format
+  ) |>
+  footnote("*, p-value <=0.05, Shapiro-Wilk normality test.") |>
+  kable_classic() |>
+  column_spec(1:10, extra_css = "vertical-align:top;")
+```
+
+```{r Determine num vars that are not normal after transformed, include=FALSE}
+var_num_non_normal_after_trans <-
+  normal_test_after_trans |>
+  filter(p.value <= 0.05) |>
+  pull(variable)
+```
+
+```{r Numerical variables that are not normal after transformation, echo=FALSE}
+var_num_non_normal_after_trans |>
+  paste0(collapse = ", ") |>
+  cat()
+```
+
+```{r Finalize transformed data, include=FALSE}
+transformed_data <-
+  num_data |>
+  cbind(cat_data) |>
+  select_at(colnames(infer_data))
+```
+
+# Outlier analysis
+
+```{r Determine exception for outlier analysis, include=FALSE}
+trans_ps_num_exception <-
+  c("t"
+    ,"maternal_age"
+    , "gravida"
+    , "bbw_g"
+    , "ga_wk"
+    , "as1"
+    , "as5"
+    , "resuscitation_at_birth"
+    , "steroid_antenatal"
+    , "surfactant"
+    , "bbw_z"
+    , "bhc_z"
+    , "death_age"
+    , "resp_supp_agg_cum_day_qw"
+    , "fio2_cum_day_qw"
+    , "fio2_cum_level_qw"
+    , "resp_supp_agg_cum_day_pct"
+    , "fio2_cum_day_pct"
+    , "fio2_cum_level_pct"
+    , "steroid_postnatal"
+    , "fio2_raw"
+    , "inotropic"
+    , "blood_volume"
+    , "transfusion"
+    , "blood_culture"
+    , "plt"
+    , "wbc"
+    , "feeding"
+    , "nec"
+    , "aki"
+  )
+```
+
+```{r Numerical var after transformation, include=FALSE}
+trans_ps_num_data <-
+  transformed_data |>
+  select_if(sapply(transformed_data, is.numeric))
+
+trans_ps_num_data <-
+  trans_ps_num_data |>
+  select_at(setdiff(colnames(trans_ps_num_data), trans_ps_num_exception))
+```
+
+```{r Relevant numerical var after transformation, echo=FALSE}
+trans_ps_num_data |>
+  colnames() |>
+  paste0(collapse = ", ") |>
+  cat()
+```
+
+# Correlation matrix
+
+```{r Identify and create missingness variables, include=FALSE}
+ms_added_data0 <-
+  transformed_data |>
+  select(-id) |>
+  sapply(\(x) any(is.na(x))) |>
+  which() |>
+  names() |>
+  lapply(
+    \(x)
+    transformed_data |>
+      select_at(x) |>
+      `colnames<-`("value") |>
+      mutate(value = ifelse(is.na(value), "yes", "no")) |>
+      `colnames<-`(paste0("ms_", x))
+  ) |>
+  reduce(cbind) |>
+  cbind(mutate(transformed_data, t_wk = ceiling(t / 7))) |>
+  select(id, t_wk, t, everything())
+
+ms_added_data <-
+  ms_added_data0 |>
+  select(-id)
+```
+
+```{r Check categorical variables with a category of 1 value, include=FALSE}
+var_cat_val1 <-
+  ms_added_data |>
+  select_if(!sapply(ms_added_data, is.numeric)) |>
+  mutate_all(as.character) |>
+  gather(variable, value) |>
+  group_by_all() |>
+  summarize(n = n(), .groups = "drop") |>
+  filter(n <= 1) |>
+  pull(variable) |>
+  unique()
+```
+
+```{r Categorical variables with a category of 1 value, echo=FALSE}
+var_cat_val1 %>%
+  paste0(collapse=', ') %>%
+  cat()
+```
+
+```{r Pair-wise distribution of categorical variables, include=FALSE}
+pairwise_cat_sum <-
+  ms_added_data |>
+  select_if(
+    !sapply(ms_added_data, is.numeric)
+    & !colnames(ms_added_data) %in% var_cat_val1
+  ) |>
+  colnames() |>
+  combn(2) |>
+  as.data.frame() |>
+  lapply(
+    \(x)
+    ms_added_data |>
+      select_at(x) |>
+      group_by_all() |>
+      summarize(n = n(), .groups = "drop") |>
+      select_at(c(x, "n")) |>
+      `colnames<-`(c("V1_value", "V2_value", "n")) |>
+      mutate(V1 = x[1], V2 = x[2])
+  ) |>
+  lapply(
+    \(x)
+    expand.grid(
+      V1_value = unique(x$V1_value)
+      , V2_value = unique(x$V2_value)
+      ) |>
+      mutate_all(as.character) |>
+      left_join(x, by = join_by(V1_value, V2_value)) |>
+      mutate_at("n", \(x) ifelse(is.na(x), 0, x)) |>
+      fill(V1, V2)
+  ) |>
+  reduce(rbind) |>
+  select(V1, V1_value, V2, V2_value, everything())
+```
+
+```{r Pair-wise perfect separation, include=FALSE}
+pairwise_cat_sum_ps <-
+  pairwise_cat_sum |>
+  group_by(V1, V2) |>
+  summarize(ps = any(n == 0), .groups = "drop")
+```
+
+```{r table-10, echo=FALSE}
+pairwise_cat_sum |>
+  inner_join(
+    pairwise_cat_sum_ps |>
+      filter(ps) |>
+      select(-ps)
+    , by = join_by(V1, V2)
+  ) |>
+  filter(n == 0) |>
+  kable(
+    caption =
+      "Table 10. Categorical variables with pair-wise perfect separation."
+    , format = kable_format
+  ) |>
+  kable_classic()
+```
+
+```{r Variable pairs for correlation tests, include=FALSE}
+correlation_pair <-
+  ms_added_data |>
+  colnames() |>
+  setdiff(var_cat_val1) |>
+  combn(2) |>
+  as.data.frame() |>
+  t() |>
+  as.data.frame() |>
+  `rownames<-`(NULL) |>
+  filter(str_remove_all(V1, "^ms_") != str_remove_all(V2, "^ms_")) |>
+  filter(!(str_detect(V1, "resp_supp") & str_detect(V2, "resp_supp"))) |>
+  filter(
+    !(str_detect(V1, "fio2_cum_level") & str_detect(V2, "fio2_cum_level"))
+  ) |>
+  filter(
+    !(str_detect(V1, "fio2_cum_day") & str_detect(V2, "fio2_cum_day"))
+  ) |>
+  filter(
+    !((str_detect(V1, "fio2_raw") & str_detect(V2, "fio2_cum_level"))
+      | (str_detect(V1, "fio2_cum_level") & str_detect(V2, "fio2_raw"))
+    )
+  ) |>
+  filter(!(str_detect(V1, "bbw") & str_detect(V2, "bbw"))) |>
+  filter(!(str_detect(V1, "bhc") & str_detect(V2, "bhc"))) |>
+  filter(
+    !((str_detect(V1, "qw") & str_detect(V2, "pct"))
+      | (str_detect(V1, "pct") & str_detect(V2, "qw"))
+    )
+  ) |>
+  filter(!(str_detect(V1, "^ms_plt") | str_detect(V2, "^ms_plt"))) |>
+  filter(!(str_detect(V1, "^ms_wbc") | str_detect(V2, "^ms_wbc"))) |>
+  filter(
+    !(str_detect(V1, "^ms_death_age") | str_detect(V2, "^ms_death_age"))
+  ) |>
+  filter(
+    !(str_detect(V1, "^ms_rop_severe") | str_detect(V2, "^ms_rop_severe"))
+  ) |>
+  filter(
+    !(str_detect(V1, "^ms_bpd_grade") | str_detect(V2, "^ms_bpd_grade"))
+  ) |>
+  filter(
+    !(str_detect(V1, "^ms_eugr_hc") | str_detect(V2, "^ms_eugr_hc"))
+  ) |>
+  filter(
+    !(str_detect(V1, "^ms_eugr_bw") | str_detect(V2, "^ms_eugr_bw"))
+  ) |>
+  filter(
+    !(str_detect(V1, "^ms_hearing") | str_detect(V2, "^ms_hearing"))
+  ) |>
+  filter(!(V1 %in% c("t", "t_wk") & V2 %in% c("t", "t_wk"))) |>
+  mutate(V1_unit = V1, V2_unit = V2) |>
+  mutate_at(
+    vars(V1_unit, V2_unit)
+    , \(x)
+      case_when(
+        str_remove_all(x, "^ms_")
+        %in% unlist(
+          lapply(raw_data1[str_detect(names(raw_data1), "42d$")], colnames)
+        )
+        | str_remove_all(x, "^ms_") == "t"
+        ~ "id|t_wk|t"
+        , str_remove_all(x, "^ms_")
+          %in% unlist(
+            lapply(raw_data1[str_detect(names(raw_data1), "6w$")], colnames)
+          )
+          | str_remove_all(x, "^ms_") == "t_wk"
+          ~ "id|t_wk"
+        , str_remove_all(x, "^ms_")
+          %in% unlist(
+            lapply(
+              raw_data1[!str_detect(names(raw_data1), "42d$|6w$")]
+              , colnames
+            )
+          )
+          ~ "id"
+      )
+  ) |>
+  mutate(
+    unit =
+      mapply(
+        \(x, y)
+          c(str_split(x, "\\|")[[1]], str_split(y, "\\|")[[1]]) |>
+            unique() |>
+            paste0(collapse = "|")
+        , V1_unit
+        , V2_unit
+      )
+  ) |>
+  filter(
+    !(V1 == "t" | V2 == "t")
+    | (V1 == "t" & V2_unit != "id")
+    | (V2 == "t" & V1_unit != "id")
+  ) |>
+  filter(
+    !(V1 == "t_wk" | V2 == "t_wk")
+    | (V1 == "t_wk" & V2_unit != "id")
+    | (V2 == "t_wk" & V1_unit != "id")
+  ) |>
+  select(-V1_unit, -V2_unit)
+```
+
+```{r Conduct correlation tests per pair with PS, include=FALSE}
+correlation_matrix_ps0 <-
+  correlation_pair |>
+  filter(
+    paste0(V1, V2)
+    %in% c(
+      pairwise_cat_sum_ps |>
+        filter(ps) |>
+        unite(V1V2, V1, V2, sep = "") |>
+        pull(V1V2)
+    )
+  )
+
+correlation_matrix_ps <-
+  correlation_matrix_ps0 |>
+  pmap(
+    \(V1, V2, unit)
+    list(
+      data =
+        ms_added_data0[, c(V1, V2, str_split(unit, "\\|")[[1]])] |>
+        unique()
+      , V1 = V1
+      , V2 = V2
+    )
+  )
+
+if (!dir.exists("data/correlation_matrix_ps")){
+  dir.create("data/correlation_matrix_ps")
+}
+
+start <- TRUE
+cl <- min(6, detectCores())
+source("R/parallel_computing-codes.R")
+
+correlation_matrix_ps[
+  correlation_matrix_ps |>
+    sapply(
+      \(x)
+      !paste0(x$V1, "_", x$V2, ".rds")
+      %in% list.files("data/correlation_matrix_ps")
+    )
+  ] |>
+  pblapply(
+    FUN =
+      \(x, auto_stat_tests = auto_stat_tests, ms_added_data = ms_added_data)
+      suppressWarnings(auto_stat_tests(
+          x$data[[x$V1]]
+          , x$data[[x$V2]]
+          , perfect_separation = TRUE
+        )) |>
+        list() |>
+        `names<-`("obj") |>
+        c(list(V1 = x$V1, V2 = x$V2)) |>
+        saveRDS(paste0("data/correlation_matrix_ps/",x$V1,"_",x$V2,".rds"))
+    , auto_stat_tests = auto_stat_tests
+    , ms_added_data = ms_added_data
+    ,  cl = cl
+  )
+
+start <- FALSE
+source("R/parallel_computing-codes.R")
+```
+
+
+```{r Conduct correlation tests per pair with PS, include=FALSE}
+correlation_matrix_ps <-
+  correlation_matrix_ps0 |>
+  pmap(\(V1, V2, unit) list(V1 = V1, V2 = V2)) |>
+  pblapply(
+    \(x)
+    readRDS(paste0("data/correlation_matrix_ps/",x$V1,"_",x$V2,".rds"))
+  ) |>
+  lapply(
+    \(x)
+    suppressWarnings(tidy(x$obj)) |>
+      filter(!str_detect(term, "\\(Intercept\\)")) |>
+      filter(!(conf.low <= 0 & conf.high >= 0)) |>
+      summarize(n_sig = n()) |>
+      mutate(p.value = ifelse(n_sig > 0, 0, 1)) |>
+      filter(!is.na(p.value)) |>
+      select(p.value) |>
+      mutate(
+        V1 = x$V1
+        , V2 = x$V2
+      )
+  ) |>
+  reduce(rbind)
+
+saveRDS("data/correlation_matrix_ps.rds")
+```
+
+```{r Conduct correlation tests for each pair without PS, include=FALSE}
+correlation_matrix_non_ps <-
+  correlation_pair |>
+  filter(
+    !paste0(V1, V2)
+    %in% c(
+      pairwise_cat_sum_ps |>
+        filter(ps) |>
+        unite(V1V2, V1, V2, sep = "") |>
+        pull(V1V2)
+    )
+  ) |>
+  pmap(
+    \(V1, V2, unit)
+    list(
+      data =
+        ms_added_data0[, c(V1, V2, str_split(unit, "\\|")[[1]])]
+      , V1 = V1
+      , V2 = V2
+    )
+  ) |>
+  lapply(
+    \(x)
+    list(
+      obj =
+        try(
+          suppressWarnings(auto_stat_tests(
+              x$data[[x$V1]]
+              ,x$data[[x$V2]]
+              ,normal_V1 = !x$V1 %in% var_num_non_normal_after_trans
+              ,normal_V2 = !x$V2 %in% var_num_non_normal_after_trans
+            ))
+        )
+      , V1 = x$V1
+      ,V2 = x$V2
+    )
+  )
+
+
+correlation_matrix_non_ps_succeed <-
+  correlation_matrix_non_ps[
+    sapply(
+      correlation_matrix_non_ps
+      , \(x) paste0(class(x$obj), collapse = " ") != "try-error"
+    )
+  ] |>
+  lapply(
+    \(x)
+    x$obj |>
+      tidy() |>
+      filter(!is.na(p.value)) |>
+      select(p.value) |>
+      mutate(
+        V1 = x$V1
+        ,V2 = x$V2
+      )
+  ) |>
+  reduce(rbind)
+
+correlation_matrix_non_ps_failed <-
+  correlation_matrix_non_ps[
+    sapply(
+      correlation_matrix_non_ps
+      , \(x) paste0(class(x$obj), collapse = " ") == "try-error"
+    )
+  ]
+
+correlation_matrix_non_ps_failed |>
+  sapply(\(x) x$obj) |>
+  unique()
+
+correlation_matrix_non_ps_failed[
+  sapply(
+    correlation_matrix_non_ps_failed
+    , \(x) str_detect(x$obj, "non-missing")
+  )
+]
+
+correlation_pair |>
+  filter(V1 == "death_age" & V2 == "hearing")
+
+ms_added_data0[, c("death_age", "hearing", "id")] |>
+  unique() |>
+  filter(!is.na(hearing)) |>
+  filter(!is.na(death_age))
+  group_by(hearing) |>
+  summarize(n = n(), .groups = "drop")
+```
+
+
+
+
+
+
+
+
+
+
+
 
 
 
