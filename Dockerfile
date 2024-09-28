@@ -30,6 +30,7 @@ RUN apt-get update && apt-get install -y \
     libtiff5-dev \
     libjpeg-dev \
     cmake \
+    libglpk-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Download and install Miniconda to /opt/conda, a directory accessible by the rstudio user
@@ -57,6 +58,13 @@ RUN R -e "BiocManager::install('tidyverse', ask=FALSE, update=FALSE, force=TRUE)
 RUN R -e "BiocManager::install('kableExtra', ask=FALSE, update=FALSE, force=TRUE)"
 RUN R -e "BiocManager::install('ggpubr', ask=FALSE, update=FALSE, force=TRUE)"
 RUN R -e "BiocManager::install('dslabs', ask=FALSE, update=FALSE, force=TRUE)"
+RUN R -e "BiocManager::install('igraph', ask=FALSE, update=FALSE, force=TRUE)"
+RUN R -e "BiocManager::install('ggnetwork', ask=FALSE, update=FALSE, force=TRUE)"
+RUN R -e "BiocManager::install('brms', ask=FALSE, update=FALSE, force=TRUE)"
+RUN R -e "BiocManager::install('broom.mixed', ask=FALSE, update=FALSE, force=TRUE)"
+RUN R -e "BiocManager::install('pbapply', ask=FALSE, update=FALSE, force=TRUE)"
+RUN R -e "BiocManager::install('mice', ask=FALSE, update=FALSE, force=TRUE)"
+RUN R -e "BiocManager::install('doParallel', ask=FALSE, update=FALSE, force=TRUE)"
 
 # Reset DEBIAN_FRONTEND variable
 ENV DEBIAN_FRONTEND=
