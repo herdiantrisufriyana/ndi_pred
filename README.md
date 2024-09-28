@@ -11,12 +11,18 @@ Change `$(pwd)` with the absolute path of the project folder.
 
 ```{bash}
 docker build -t ndi_pred --load .
-docker run -it -p 8787:8787 -p 8888:8888 -v "$(pwd)":/home/rstudio ndi_pred
+docker run -d -p 8787:8787 -p 8888:8888 -v "$(pwd)":/home/rstudio/project --name ndi_pred_container ndi_pred
 ```
 
 Visit http://localhost:8787.
 Username: rstudio
 Password: 1234
+
+Run this line in console everytime running the image:
+
+```{r}
+setwd("~/project")
+```
 
 Use terminal in RStudio to run jupyter lab using this line of codes.
 
