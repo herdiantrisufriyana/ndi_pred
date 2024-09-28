@@ -27,7 +27,7 @@ auto_stat_tests <-
             ,V2 = V2
           )
         
-        if(length((unique(V1))) > 2){
+        if(length(unique(V1)[!is.na(unique(V1))]) > 2){
           func <- function(V1, V2){
             prior_info <-
               get_prior(
@@ -68,11 +68,11 @@ auto_stat_tests <-
         }
       }else{
         func <- function(V1, V2){
-          fisher.test(V1, V2)
+          fisher.test(V1, V2, workspace = 1e7, simulate.p.value = TRUE)
         }
       }
     }else if(!is.numeric(V1)){
-      if(length((unique(V1))) > 2){
+      if(length(unique(V1)[!is.na(unique(V1))]) > 2){
         func <- function(V1, V2){
           if(normal_V2){
             data <-
@@ -117,7 +117,7 @@ auto_stat_tests <-
         }
       }
     }else{
-      if(length((unique(V2))) > 2){
+      if(length(unique(V2)[!is.na(unique(V2))]) > 2){
         func <- function(V1, V2){
           if(normal_V1){
             data <-
