@@ -1142,7 +1142,7 @@ correlation_pair <-
   select(-V1_unit, -V2_unit)
 ```
 
-```{r Conduct correlation tests per pair with PS, include=FALSE}
+```{r Conduct correlation tests per pair with PS, eval=FALSE, include=FALSE}
 correlation_matrix_ps0 <-
   correlation_pair |>
   filter(
@@ -1203,34 +1203,34 @@ correlation_matrix_ps[
 
 start <- FALSE
 source("R/parallel_computing-codes.R")
-```
 
-
-```{r Conduct correlation tests per pair with PS, include=FALSE}
 correlation_matrix_ps <-
   correlation_matrix_ps0 |>
   pmap(\(V1, V2, unit) list(V1 = V1, V2 = V2)) |>
   pblapply(
     \(x)
-    readRDS(paste0("data/correlation_matrix_ps/",x$V1,"_",x$V2,".rds"))
-  ) |>
-  lapply(
-    \(x)
-    suppressWarnings(tidy(x$obj)) |>
-      filter(!str_detect(term, "\\(Intercept\\)")) |>
-      filter(!(conf.low <= 0 & conf.high >= 0)) |>
-      summarize(n_sig = n()) |>
-      mutate(p.value = ifelse(n_sig > 0, 0, 1)) |>
-      filter(!is.na(p.value)) |>
-      select(p.value) |>
-      mutate(
-        V1 = x$V1
-        , V2 = x$V2
+    suppressWarnings(
+      tidy(
+        readRDS(
+          paste0("data/correlation_matrix_ps/",x$V1,"_",x$V2,".rds")
+        )$obj
       )
+    ) |>
+    filter(!str_detect(term, "\\(Intercept\\)")) |>
+    filter(!(conf.low <= 0 & conf.high >= 0)) |>
+    summarize(n_sig = n()) |>
+    mutate(p.value = ifelse(n_sig > 0, 0, 1)) |>
+    filter(!is.na(p.value)) |>
+    select(p.value) |>
+    mutate(V1 = x$V1, V2 = x$V2)
   ) |>
   reduce(rbind)
 
-saveRDS("data/correlation_matrix_ps.rds")
+saveRDS(correlation_matrix_ps, "data/correlation_matrix_ps.rds")
+```
+
+```{r Load pre-conducted correlation tests per pair with PS, include=FALSE}
+correlation_matrix_ps <- readRDS("data/correlation_matrix_ps.rds")
 ```
 
 ```{r Conduct correlation tests for each pair without PS, include=FALSE}
@@ -1293,43 +1293,192 @@ correlation_matrix_non_ps_succeed <-
   reduce(rbind)
 
 correlation_matrix_non_ps_failed <-
-  correlation_matrix_non_ps[
-    sapply(
-      correlation_matrix_non_ps
-      , \(x) paste0(class(x$obj), collapse = " ") == "try-error"
+  correlation_pair |>
+  filter(
+    !paste0(V1, V2)
+    %in% c(
+      pairwise_cat_sum_ps |>
+        filter(ps) |>
+        unite(V1V2, V1, V2, sep = "") |>
+        pull(V1V2)
     )
-  ]
+  ) |>
+  slice(
+    which(
+      sapply(
+        correlation_matrix_non_ps
+        , \(x) paste0(class(x$obj), collapse = " ") == "try-error"
+      )
+    )
+  ) |>
+  mutate(p.value = as.numeric(NA)) |>
+  select(p.value, V1, V2)
 
-correlation_matrix_non_ps_failed |>
-  sapply(\(x) x$obj) |>
-  unique()
-
-correlation_matrix_non_ps_failed[
-  sapply(
-    correlation_matrix_non_ps_failed
-    , \(x) str_detect(x$obj, "non-missing")
-  )
-]
-
-correlation_pair |>
-  filter(V1 == "death_age" & V2 == "hearing")
-
-ms_added_data0[, c("death_age", "hearing", "id")] |>
-  unique() |>
-  filter(!is.na(hearing)) |>
-  filter(!is.na(death_age))
-  group_by(hearing) |>
-  summarize(n = n(), .groups = "drop")
+correlation_matrix_non_ps <-
+  correlation_matrix_non_ps_succeed |>
+  rbind(correlation_matrix_non_ps_failed)
 ```
 
+```{r Conduct correlation tests for each pair, include=FALSE}
+correlation_matrix <-
+  correlation_matrix_ps |>
+  rbind(correlation_matrix_non_ps) |>
+  mutate(p.value = p.adjust(p.value, "BH")) |>
+  rename(cor.p.value = p.value) |>
+  right_join(
+    ms_added_data |>
+      colnames() |>
+      combn(2) |>
+      as.data.frame() |>
+      t() |>
+      as.data.frame() |>
+      `rownames<-`(NULL)
+    ,by = join_by(V1, V2)
+  ) |>
+  mutate(
+    V1 = factor(V1, colnames(ms_added_data))
+    ,V2 = factor(V2, levels(V1))
+  ) |>
+  arrange(V1, V2)
+```
 
+```{r Plot correlation matrix, include=FALSE}
+same_v_corr_df =
+  data.frame(
+    cor.p.value = 0
+    ,V1 = colnames(ms_added_data)
+    ,V2 = colnames(ms_added_data)
+    ,sig = "2 - Significant"
+  )
 
+correlation_matrix_plot <-
+  correlation_matrix |>
+  mutate(
+    V1 = factor(V1, rev(levels(V1)))
+    ,sig =
+      ifelse(
+        is.na(cor.p.value)
+        ,ifelse(
+          str_remove_all(V1, "^ms_") == str_remove_all(V2, "^ms_")
+          ,"3 - Not tested†"
+          ,ifelse(
+            V1 %in% var_cat_val1
+            | V2 %in% var_cat_val1
+            ,"4 - Not tested‡"
+            ,"5 - Not tested§"
+          )
+        )
+        ,ifelse(cor.p.value <= 0.05, "2 - Significant", "1 - Not significant")
+      ) |>
+      factor()
+    ,sig = factor(sig)
+    ,cor.p.value = ifelse(cor.p.value<0.001, "<0.001", round(cor.p.value,3))
+  ) |>
+  rbind(same_v_corr_df) |>
+  ggplot(aes(V1, V2, fill = sig)) +
+  geom_tile(color = "white", na.rm = TRUE) +
+  # geom_text(aes(label = cor.p.value), size = 2.5, na.rm = TRUE) +
+  geom_tile(data = same_v_corr_df, fill = "white") +
+  geom_text(
+    data =
+      same_v_corr_df |>
+      mutate(label = V1)
+    ,aes(label = label)
+    ,size = 1.5
+    ,angle = 45
+    ,hjust = 1
+    ,nudge_x = 0.15
+    ,nudge_y = 0.15
+  ) +
+  coord_flip() +
+  scale_x_discrete(expand = expansion(add = 10)) +
+  scale_y_discrete(expand = expansion(add = 5)) +
+  xlab("") +
+  ylab("") +
+  scale_fill_discrete("Significance*") +
+  theme(
+    panel.grid = element_blank()
+    ,panel.border = element_blank()
+    ,axis.ticks = element_blank()
+    ,axis.text = element_blank()
+  )
+```
 
+```{r figure-3, echo=FALSE, fig.height=5, fig.width=7}
+correlation_matrix_plot
+```
 
+```{r Write pairs with significant correlations, eval=FALSE, include=FALSE}
+correlation_matrix |>
+  filter(cor.p.value <= 0.05) |>
+  filter(
+    !(V1 %in% paste0(var_num_non_normal, "_trans")
+      | V2 %in% paste0(var_num_non_normal, "_trans")
+    )
+  ) |>
+  select(V1, V2) |>
+  write_csv("inst/extdata/correlation.csv")
+```
 
+# Missing value imputation
 
+```{r Imputation predictor matrix, include=FALSE}
+imp_predictor_matrix <-
+  correlation_matrix |>
+  filter(!is.na(cor.p.value)) |>
+  mutate(imp_predictor = ifelse(cor.p.value <= 0.05, 1, 0)) |>
+  select(V1, V2, imp_predictor) |>
+  mutate_at(c("V1", "V2"), str_remove_all, "^ms_") |>
+  unique() |>
+  right_join(
+    expand.grid(
+      V1 = colnames(transformed_data)
+      ,V2 = colnames(transformed_data)
+      ,stringsAsFactors = FALSE
+    )
+    ,by = join_by(V1, V2)
+  ) |>
+  mutate(imp_predictor = ifelse(V1 == V2, 0, imp_predictor)) |>
+  pmap(
+    \(V1, V2, imp_predictor)
+    data.frame(
+      V1_V2 =
+        sort(c(V1, V2)) |>
+        paste0(collapse = "|")
+      ,imp_predictor = imp_predictor
+    )
+  ) |>
+  reduce(rbind) |>
+  separate(V1_V2, c("V1", "V2"), sep = "\\|") |>
+  group_by(V1, V2) |>
+  summarize(
+    imp_predictor = as.integer(sum(imp_predictor, na.rm = TRUE) > 0)
+    ,.groups = "drop"
+  ) |>
+  spread(V2, imp_predictor, fill = 0) |>
+  column_to_rownames(var = "V1") |>
+  as.matrix()
 
+imp_predictor_matrix <-
+  imp_predictor_matrix[
+    colnames(transformed_data)
+    ,colnames(transformed_data)
+  ]
+```
 
+```{r Performing multiple imputation, include=FALSE}
+imp_results <-
+  suppressWarnings(
+    mice(
+      data = transformed_data
+      ,method = 'pmm'
+      ,m = 10
+      ,seed = seed
+      ,predictorMatrix = imp_predictor_matrix
+      ,print = FALSE
+    )
+  )
+```
 
 
 
