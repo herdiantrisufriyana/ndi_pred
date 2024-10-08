@@ -55,6 +55,10 @@ inst/extdata/Neonatal outcome AI prediction_多維軌跡資料數據盤點 NCKU-
 # Ignore local file/folders
 *.Rproj
 .sh_history
+.DS_Store
 
 # Ignore archive
 archive*
+
+# Ignore large files (>25 MB)
+data/correlation_matrix_ps/*
