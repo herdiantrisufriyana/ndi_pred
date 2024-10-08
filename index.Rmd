@@ -1466,7 +1466,7 @@ imp_predictor_matrix <-
   ]
 ```
 
-```{r Performing multiple imputation, include=FALSE}
+```{r Performing multiple imputation, eval=FALSE, include=FALSE}
 imp_results <-
   suppressWarnings(
     mice(
@@ -1478,6 +1478,26 @@ imp_results <-
       ,print = FALSE
     )
   )
+
+saveRDS(imp_results, "data/imp_results.rds")
+```
+
+```{r Load pre-performed multiple imputation, include=FALSE}
+imp_results <- readRDS("data/imp_results.rds")
+```
+
+```{r Obtain imputed data, include=FALSE}
+imputed_data <- complete(imp_results, 1)
+
+imputed_data <-
+  imputed_data |>
+  imap(
+    ~ list(
+        select_at(transformed_data, .y)
+        ,select_at(imputed_data, .y)
+      )[[ifelse(.y %in% colnames(raw_data1$outcomes), 1, 2)]]
+  ) |>
+  reduce(cbind)
 ```
 
 
