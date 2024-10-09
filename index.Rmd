@@ -1037,7 +1037,8 @@ pairwise_cat_sum |>
       "Table 10. Categorical variables with pair-wise perfect separation."
     , format = kable_format
   ) |>
-  kable_classic()
+  kable_classic() |>
+  column_spec(1:5, extra_css = "vertical-align:top;")
 ```
 
 ```{r Variable pairs for correlation tests, include=FALSE}
@@ -1333,7 +1334,7 @@ correlation_matrix <-
       t() |>
       as.data.frame() |>
       `rownames<-`(NULL)
-    ,by = join_by(V1, V2)
+    , by = join_by(V1, V2)
   ) |>
   mutate(
     V1 = factor(V1, colnames(ms_added_data))
@@ -1346,16 +1347,16 @@ correlation_matrix <-
 same_v_corr_df =
   data.frame(
     cor.p.value = 0
-    ,V1 = colnames(ms_added_data)
-    ,V2 = colnames(ms_added_data)
-    ,sig = "2 - Significant"
+    , V1 = colnames(ms_added_data)
+    , V2 = colnames(ms_added_data)
+    , sig = "2 - Significant"
   )
 
 correlation_matrix_plot <-
   correlation_matrix |>
   mutate(
     V1 = factor(V1, rev(levels(V1)))
-    ,sig =
+    , sig =
       ifelse(
         is.na(cor.p.value)
         ,ifelse(
@@ -1371,8 +1372,8 @@ correlation_matrix_plot <-
         ,ifelse(cor.p.value <= 0.05, "2 - Significant", "1 - Not significant")
       ) |>
       factor()
-    ,sig = factor(sig)
-    ,cor.p.value = ifelse(cor.p.value<0.001, "<0.001", round(cor.p.value,3))
+    , sig = factor(sig)
+    , cor.p.value = ifelse(cor.p.value<0.001, "<0.001", round(cor.p.value,3))
   ) |>
   rbind(same_v_corr_df) |>
   ggplot(aes(V1, V2, fill = sig)) +
@@ -1383,12 +1384,12 @@ correlation_matrix_plot <-
     data =
       same_v_corr_df |>
       mutate(label = V1)
-    ,aes(label = label)
-    ,size = 1.5
-    ,angle = 45
-    ,hjust = 1
-    ,nudge_x = 0.15
-    ,nudge_y = 0.15
+    , aes(label = label)
+    , size = 1.5
+    , angle = 45
+    , hjust = 1
+    , nudge_x = 0.15
+    , nudge_y = 0.15
   ) +
   coord_flip() +
   scale_x_discrete(expand = expansion(add = 10)) +
@@ -1398,9 +1399,9 @@ correlation_matrix_plot <-
   scale_fill_discrete("Significance*") +
   theme(
     panel.grid = element_blank()
-    ,panel.border = element_blank()
-    ,axis.ticks = element_blank()
-    ,axis.text = element_blank()
+    , panel.border = element_blank()
+    , axis.ticks = element_blank()
+    , axis.text = element_blank()
   )
 ```
 
@@ -1411,11 +1412,6 @@ correlation_matrix_plot
 ```{r Write pairs with significant correlations, eval=FALSE, include=FALSE}
 correlation_matrix |>
   filter(cor.p.value <= 0.05) |>
-  filter(
-    !(V1 %in% paste0(var_num_non_normal, "_trans")
-      | V2 %in% paste0(var_num_non_normal, "_trans")
-    )
-  ) |>
   select(V1, V2) |>
   write_csv("inst/extdata/correlation.csv")
 ```
@@ -1433,10 +1429,10 @@ imp_predictor_matrix <-
   right_join(
     expand.grid(
       V1 = colnames(transformed_data)
-      ,V2 = colnames(transformed_data)
-      ,stringsAsFactors = FALSE
+      , V2 = colnames(transformed_data)
+      , stringsAsFactors = FALSE
     )
-    ,by = join_by(V1, V2)
+    , by = join_by(V1, V2)
   ) |>
   mutate(imp_predictor = ifelse(V1 == V2, 0, imp_predictor)) |>
   pmap(
@@ -1445,7 +1441,7 @@ imp_predictor_matrix <-
       V1_V2 =
         sort(c(V1, V2)) |>
         paste0(collapse = "|")
-      ,imp_predictor = imp_predictor
+      , imp_predictor = imp_predictor
     )
   ) |>
   reduce(rbind) |>
@@ -1453,7 +1449,7 @@ imp_predictor_matrix <-
   group_by(V1, V2) |>
   summarize(
     imp_predictor = as.integer(sum(imp_predictor, na.rm = TRUE) > 0)
-    ,.groups = "drop"
+    , .groups = "drop"
   ) |>
   spread(V2, imp_predictor, fill = 0) |>
   column_to_rownames(var = "V1") |>
@@ -1462,7 +1458,7 @@ imp_predictor_matrix <-
 imp_predictor_matrix <-
   imp_predictor_matrix[
     colnames(transformed_data)
-    ,colnames(transformed_data)
+    , colnames(transformed_data)
   ]
 ```
 
@@ -1471,11 +1467,11 @@ imp_results <-
   suppressWarnings(
     mice(
       data = transformed_data
-      ,method = 'pmm'
-      ,m = 10
-      ,seed = seed
-      ,predictorMatrix = imp_predictor_matrix
-      ,print = FALSE
+      , method = 'pmm'
+      , m = 10
+      , seed = seed
+      , predictorMatrix = imp_predictor_matrix
+      , print = FALSE
     )
   )
 
@@ -1494,15 +1490,246 @@ imputed_data <-
   imap(
     ~ list(
         select_at(transformed_data, .y)
-        ,select_at(imputed_data, .y)
+        , select_at(imputed_data, .y)
       )[[ifelse(.y %in% colnames(raw_data1$outcomes), 1, 2)]]
   ) |>
   reduce(cbind)
 ```
 
+# Descriptive statistics
 
+```{r Finalize readily-analyzed data, include=FALSE}
+processed_data <- imputed_data
+```
 
+```{r Determine variables, include=FALSE}
+var <- list()
 
+var$s <- c("id")
+
+var$t <- c("t")
+
+var$dependent <-
+  raw_data1[str_detect(names(raw_data1), "outcome")] |>
+  lapply(colnames) |>
+  reduce(c) |>
+  unique() |>
+  setdiff(c(var$s, var$t, "t_day", "t_wk", "ga_wk", "death_age"))
+
+var$independent <-
+  raw_data1[str_detect(names(raw_data1), "breath")] |>
+  lapply(colnames) |>
+  reduce(c) |>
+  unique() |>
+  setdiff(c(var$s, var$t, "t_day", "t_wk", "ga_wk", "death_age"))
+
+var$covariates=
+  processed_data %>%
+  colnames() %>%
+  setdiff(unlist(var))
+```
+
+```{r Read descriptive variable-types, include=FALSE}
+variable_desc_type <-
+  read_csv("inst/extdata/variable_desc_type.csv", show_col_types = FALSE)
+```
+
+```{r Modify descriptive variable-types, include=FALSE}
+desc_data <-
+  processed_data |>
+  imap(
+    ~ data.frame(
+        value =
+          ifelse(
+            filter(variable_desc_type, variable == .y)$desc_type != "numeric"
+            , ifelse(.y == "id", as.character, as.factor)
+            , as.numeric
+          )(.x)
+      ) |>
+      `colnames<-`(.y)
+  ) |>
+  reduce(cbind)
+```
+
+```{r Simplify correlation pair to identify unit of obs, include=FALSE}
+correlation_pair_simplified <-
+  correlation_pair |>
+  mutate_at(c("V1", "V2"), \(x) ifelse(x == "t_wk", "t", x)) |>
+  mutate_at("unit", str_replace_all, "t_wk\\|t", "t") |>
+  mutate_at("unit", str_replace_all, "t_wk", "t") |>
+  unique()
+```
+
+```{r Identify unit of obs for each outcome-variable, include=FALSE}
+outcome_variable_unit <-
+  var$dependent |>
+  lapply(
+    \(x)
+    data.frame(outcome = x, variable = c(var$independent, var$covariates))
+  ) |>
+  reduce(rbind) |>
+  mutate(
+    unit =
+      mapply(
+        FUN =
+          \(x, y)
+          correlation_pair_simplified |>
+            filter((V1 == x & V2 == y) | (V2 == y & V1 == x)) |>
+            pull(unit) |>
+            paste0(collapse = "//")
+          , outcome
+          , variable
+      )
+  ) |>
+  mutate(unit = ifelse(unit == "", "id", unit))
+```
+
+```{r Outcome-wise average and SD, include=FALSE}
+avg_sd_data <-
+  var$dependent |>
+  `names<-`(var$dependent) |>
+  lapply(
+    \(x)
+    desc_data |>
+      select_at(c(var$independent, var$covariates)) |>
+      select_if(is.numeric) |>
+      mutate(seq = seq(n())) |>
+      gather(variable, value, -seq) |>
+      left_join(
+        desc_data |>
+          select_at(c(var$s, var$t, x)) |>
+          mutate(seq = seq(n()))
+        , by = join_by(seq)
+      ) |>
+      select(-seq) |>
+      mutate(outcome = x) |>
+      left_join(outcome_variable_unit, by = join_by(outcome, variable)) |>
+      mutate(unit_id = ifelse(unit == "id", id, paste0(id, "_" ,t))) |>
+      rename_at(x, \(x) "category") |>
+      select(unit_id, outcome, category, variable, unit, value) |>
+      unique()|>
+      group_by(variable) |>
+      mutate(N = n()) |>
+      group_by(outcome, category, variable, unit, N) |>
+      summarize(
+        avg = mean(value)
+        , std = sd(value)
+        , .groups = 'drop'
+      )
+  ) |>
+  reduce(rbind)
+```
+
+```{r Outcome-wise proportion, include=FALSE}
+prop_n_data <-
+  var$dependent |>
+  `names<-`(var$dependent) |>
+  pblapply(
+    \(x)
+    desc_data |>
+      select_at(c(var$independent, var$covariates)) |>
+      select_if(\(x) !is.numeric(x)) |>
+      mutate_all(as.character) |>
+      mutate(seq = seq(n())) |>
+      gather(variable, value, -seq) |>
+      left_join(
+        desc_data |>
+          select_at(c(var$s, var$t, x)) |>
+          mutate(seq=seq(n()))
+        ,by = join_by(seq)
+      ) |>
+      select(-seq) |>
+      mutate(outcome = x) |>
+      left_join(outcome_variable_unit, by = join_by(outcome, variable)) |>
+      mutate(unit_id = ifelse(unit == "id", id, paste0(id, "_" ,t))) |>
+      rename_at(x, \(x) "category") |>
+      select(unit_id, outcome, category, variable, unit, value) |>
+      unique()|>
+      group_by(variable) |>
+      mutate(N = n()) |>
+      group_by(outcome, category, variable, unit, N, value) |>
+      summarize(n = n(), .groups='drop') |>
+      group_by(outcome, category, variable, unit, N) |>
+      mutate(total = sum(n)) |>
+      ungroup() |>
+      mutate(p = round(n / total * 100, 0))
+  ) |>
+  reduce(rbind)
+```
+
+```{r Summarize sample characteristics, include=FALSE}
+desc_stats <-
+  list(
+    avg_sd_data |>
+      mutate_at(c("avg", "std"), round, 2) |>
+      mutate(std = paste0("(", as.character(std), ")")) |>
+      unite(avg_std, avg, std, sep=" ") |>
+      mutate(value = NA) |>
+      rename(summary = avg_std)
+    ,prop_n_data |>
+      select(-total) |>
+      mutate(n = paste0("(", as.character(n), ")")) |>
+      unite(p_n, p, n, sep = " ") |>
+      rename(summary = p_n)
+  ) |>
+  lapply(mutate_at, "category", as.character) |>
+  lapply(mutate_at, "category", \(x) ifelse(is.na(x), "(missing)", x)) |>
+  lapply(unite, dep_var, outcome, category, sep = " ") |>
+  lapply(mutate_at, "dep_var", \(x) factor(x, unique(x))) |>
+  lapply(spread, dep_var, summary, fill = "0 (0)") |>
+  reduce(rbind) |>
+  mutate_at("value", as.character) |>
+  mutate_at(
+    "value"
+    ,\(x) ifelse(is.na(x), "average (SD)", paste0(x," % (n)"))
+  ) |>
+  rbind(
+    prop_n_data |>
+      mutate_at("category", as.character) |>
+      mutate_at("category", \(x) ifelse(is.na(x), "(missing)", x)) |>
+      unite(variable, outcome, category, sep = " ") |>
+      select(variable, unit, N,  total) |>
+      unique() |>
+      mutate_at("variable", \(x) factor(x, unique(x))) |>
+      mutate(total = paste0(total, " (", round(total/N*100, 2),")")) |>
+      spread(variable, total, fill = 0) |>
+      mutate(variable = "total (prevalence)", value = "n (%)") |>
+      select(unit, N, variable, value, everything())
+  ) |>
+  arrange(
+    desc(unit)
+    , N
+    , factor(variable, c("total (prevalence)", var$independent, var$covariates))
+  ) |>
+  select(unit, N, everything()) |>
+  group_by(unit, N) |>
+  mutate(variable = ifelse(duplicated(variable), "", variable)) |>
+  ungroup() |>
+  mutate(
+    unit = ifelse(duplicated(unit), "", unit)
+    , N = ifelse(duplicated(N), "", N)
+  )
+```
+
+```{r table-11, echo=FALSE}
+desc_stats |>
+  kable(
+    caption = "Table 11. Sample characteristics."
+    , format = kable_format
+  ) |>
+  kable_classic() |>
+  column_spec(1:22, extra_css = "vertical-align:top;")
+```
+
+```{r}
+correlation_matrix |>
+  filter(cor.p.value <= 0.05) |>
+  filter(!str_detect(V1, "^ms_") & !str_detect(V2, "^ms_")) |>
+  select(V1, V2) |>
+  mutate_all(as.character) |>
+  mutate_at(c("V1", "V2"), \(x) ifelse(x == "t_wk", "t", x)) |>
+  unique()
+```
 
 
 
