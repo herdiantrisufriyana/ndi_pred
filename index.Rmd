@@ -1423,8 +1423,16 @@ imp_predictor_matrix <-
   correlation_matrix |>
   filter(!is.na(cor.p.value)) |>
   mutate(imp_predictor = ifelse(cor.p.value <= 0.05, 1, 0)) |>
+  filter(imp_predictor == 1) |>
   select(V1, V2, imp_predictor) |>
   mutate_at(c("V1", "V2"), str_remove_all, "^ms_") |>
+  mutate_at(c("V1", "V2"), as.character) |>
+  mutate_at(c("V1", "V2"), \(x) ifelse(x == "t_wk", "t", x)) |>
+  unique()
+
+imp_predictor_matrix <-
+  imp_predictor_matrix |>
+  rbind(`colnames<-`(imp_predictor_matrix, c("V2", "V1", "imp_predictor"))) |>
   unique() |>
   right_join(
     expand.grid(
@@ -1433,23 +1441,6 @@ imp_predictor_matrix <-
       , stringsAsFactors = FALSE
     )
     , by = join_by(V1, V2)
-  ) |>
-  mutate(imp_predictor = ifelse(V1 == V2, 0, imp_predictor)) |>
-  pmap(
-    \(V1, V2, imp_predictor)
-    data.frame(
-      V1_V2 =
-        sort(c(V1, V2)) |>
-        paste0(collapse = "|")
-      , imp_predictor = imp_predictor
-    )
-  ) |>
-  reduce(rbind) |>
-  separate(V1_V2, c("V1", "V2"), sep = "\\|") |>
-  group_by(V1, V2) |>
-  summarize(
-    imp_predictor = as.integer(sum(imp_predictor, na.rm = TRUE) > 0)
-    , .groups = "drop"
   ) |>
   spread(V2, imp_predictor, fill = 0) |>
   column_to_rownames(var = "V1") |>
@@ -1708,30 +1699,223 @@ desc_stats <-
   mutate(
     unit = ifelse(duplicated(unit), "", unit)
     , N = ifelse(duplicated(N), "", N)
-  )
+  ) |>
+  mutate_all(str_replace_all, "NA \\(NA\\)", "N/A")
 ```
 
 ```{r table-11, echo=FALSE}
 desc_stats |>
+  select_if(
+    colnames(desc_stats) %in% c("unit", "N", "variable", "value")
+    | str_detect(colnames(desc_stats), "^survive")
+  ) |>
+  left_join(
+    rbind(
+        correlation_matrix |>
+          filter(str_detect(V2, "^survive")) |>
+          select(variable = V1, cor.p.value)
+        , correlation_matrix |>
+          filter(str_detect(V1, "^survive")) |>
+          select(variable = V2, cor.p.value)
+      )
+    , by = join_by(variable)
+  ) |>
+  mutate(
+    cor.p.value =
+      ifelse(
+        is.na(cor.p.value)
+        , ""
+        , ifelse(
+            cor.p.value < 0.001
+            , "<0.001"
+            , ifelse(cor.p.value > 0.05, ">0.05", round(cor.p.value, 3))
+          )
+      )
+  ) |>
   kable(
-    caption = "Table 11. Sample characteristics."
+    caption = "Table 11. Sample characteristics by survival."
     , format = kable_format
   ) |>
   kable_classic() |>
-  column_spec(1:22, extra_css = "vertical-align:top;")
+  column_spec(1:6, extra_css = "vertical-align:top;")
+```
+
+```{r table-12, echo=FALSE}
+desc_stats |>
+  select_if(!str_detect(colnames(desc_stats), "^survive")) |>
+  kable(
+    caption = "Table 12. Sample characteristics by other outcomes."
+    , format = kable_format
+  ) |>
+  kable_classic() |>
+  column_spec(1:20, extra_css = "vertical-align:top;")
+```
+
+# Univariate regression analysis
+
+```{r Conduct univariate regression analysis, include=FALSE}
+univar_reg <-
+  processed_data |>
+  select_at(c(var$independent, var$covariates)) |>
+  colnames()
+
+univar_reg <-
+  var$dependent |>
+  lapply(
+    \(x)
+    univar_reg |>
+      setdiff(ifelse(x == "survive", NA, "death_age")) |>
+      `names<-`(
+        univar_reg |>
+          setdiff(ifelse(x == "survive", NA, "death_age"))
+      ) |>
+      lapply(c, x) |>
+      lapply(rev) |>
+      lapply(paste0, collapse = '~') |>
+      lapply(as.formula) |>
+      lapply(
+        \(x)
+        suppressWarnings(glm(x, family = binomial(), data = processed_data))
+      ) |>
+      lapply(tidy) |>
+      imap( ~ mutate(.x, outcome = x, variable = .y)) |>
+      reduce(rbind) |>
+      select(outcome, variable, everything()) |>
+      mutate(
+        term = str_remove_all(term, variable)
+        ,term = ifelse(term == "", "value", term)
+        ,OR = exp(estimate)
+        ,LB = exp(estimate - qnorm(0.975) * std.error)
+        ,UB = exp(estimate + qnorm(0.975) * std.error)
+      )
+  ) |>
+  reduce(rbind)
+```
+
+```{r table-10, echo=FALSE}
+univar_reg  |>
+  filter(term != "(Intercept)") |>
+  select_at(c("outcome", "variable", "term", "OR", "LB", "UB", "p.value")) |>
+  mutate_at(4:7, round, 3) |>
+  mutate(variable = paste0(variable, ifelse(p.value <= 0.05, "*", ""))) |>
+  mutate(outcome = factor(outcome, unique(outcome))) |>
+  arrange(outcome, p.value) |>
+  mutate(
+    p.value =
+      ifelse(p.value < 0.001, "<0.001", round(p.value, 3)) |>
+      as.character()
+  ) |>
+  kable(
+    format = kable_format
+    ,caption = "Table 10. Univariate regression analysis."
+  ) |>
+  footnote("*, p-value <= 0.05.") |>
+  kable_classic()
+```
+
+```{r Filter significant univariate regression, include=FALSE}
+univar_reg_sig <-
+  univar_reg |>
+  filter(term != '(Intercept)') |>
+  filter(p.value <= 0.05) |>
+  mutate(outcome = factor(outcome, unique(outcome))) |>
+  arrange(outcome, p.value)
+```
+
+```{r Obtain variables in sig uni reg results, include=FALSE}
+univar_reg_sig_var <-
+  var$dependent |>
+  `names<-`(var$dependent) |>
+  lapply(
+    \(x)
+    univar_reg_sig |>
+      filter(outcome == x) |>
+      pull(variable) |>
+      unique()
+  )
+```
+
+# Multivariate regression analysis
+
+```{r Variables with significant correlations, include=FALSE}
+sig_var <-
+  correlation_matrix |>
+  filter(!(str_detect(V1, "^ms_") | str_detect(V2, "^ms_"))) |>
+  filter(!is.na(cor.p.value)) |>
+  mutate(predictor = ifelse(cor.p.value <= 0.05, 1, 0)) |>
+  filter(predictor == 1) |>
+  select(V1, V2, predictor) |>
+  mutate_at(c("V1", "V2"), as.character) |>
+  mutate_at(c("V1", "V2"), \(x) ifelse(x == "t_wk", "t", x)) |>
+  unique()
+
+sig_var <-
+  sig_var |>
+  rbind(`colnames<-`(sig_var, c("V2", "V1", "predictor"))) |>
+  unique() |>
+  right_join(
+    expand.grid(
+      V1 = colnames(processed_data)
+      , V2 = colnames(processed_data)
+      , stringsAsFactors = FALSE
+    )
+    , by = join_by(V1, V2)
+  ) |>
+  spread(V2, predictor, fill = 0) |>
+  column_to_rownames(var = "V1") |>
+  as.matrix()
+
+sig_var <-
+  sig_var[
+    colnames(processed_data)
+    , colnames(processed_data)
+  ]
 ```
 
 ```{r}
-correlation_matrix |>
-  filter(cor.p.value <= 0.05) |>
-  filter(!str_detect(V1, "^ms_") & !str_detect(V2, "^ms_")) |>
-  select(V1, V2) |>
-  mutate_all(as.character) |>
-  mutate_at(c("V1", "V2"), \(x) ifelse(x == "t_wk", "t", x)) |>
-  unique()
+sig_var[var$dependent, , drop = FALSE] |>
+  as.data.frame() |>
+  rownames_to_column(var = "outcome") |>
+  gather(variable, predictor, -outcome) |>
+  filter(predictor == 1) |>
+  select(-predictor) |>
+  arrange(factor(outcome, unique(outcome)))
 ```
 
+```{r Determine adjustment, include=FALSE}
+multivar_adjustment <-
+  correlation_graph_df |>
+  filter(from %in% univar_reg_sig_var & to %in% univar_reg_sig_var) |>
+  right_join(data.frame(to = univar_reg_sig_var), by = join_by(to)) |>
+  group_by(to) |>
+  mutate(seq = seq(n())) |>
+  rbind(
+    univar_reg_sig |>
+      select(to = variable) |>
+      mutate(seq = 0, from = to)
+  ) |>
+  arrange(to, seq) |>
+  mutate(
+    from = 
+      ifelse(
+        str_remove_all(to, "_trans$") %in% var_num_non_normal_after_trans
+        ,from
+        ,ifelse(
+          from %in% var_num_non_normal_after_trans
+          ,paste0(from, "_trans")
+          ,from
+        )
+      )
+  ) |>
+  group_by(to) |>
+  summarize(covariates = paste0(from[!is.na(from)], collapse = "+")) |>
+  rename(variable = to) |>
+  mutate(formula = paste0(var$dependent, "~", covariates)) |>
+  mutate(covariates = str_remove_all(covariates, paste0(variable, "\\+*"))) |>
+  arrange(factor(variable, unique(univar_reg_sig$variable)))
 
+
+```
 
 
 
