@@ -1487,11 +1487,11 @@ imputed_data <-
   reduce(cbind)
 ```
 
-# Descriptive statistics
-
 ```{r Finalize readily-analyzed data, include=FALSE}
 processed_data <- imputed_data
 ```
+
+# Descriptive statistics
 
 ```{r Determine variables, include=FALSE}
 var <- list()
@@ -1582,7 +1582,7 @@ avg_sd_data <-
   lapply(
     \(x)
     desc_data |>
-      select_at(c(var$independent, var$covariates)) |>
+      select_at(c(var$independent, var$covariates, var$dependent[var$dependent != x])) |>
       select_if(is.numeric) |>
       mutate(seq = seq(n())) |>
       gather(variable, value, -seq) |>
@@ -1749,6 +1749,114 @@ desc_stats |>
   ) |>
   kable_classic() |>
   column_spec(1:20, extra_css = "vertical-align:top;")
+```
+
+# Feature extraction
+
+```{r Write processed data old categories, eval=FALSE, include=FALSE}
+processed_data |>
+  select_if(is.factor) |>
+  gather(colname, old_cat) |>
+  mutate(colname = factor(colname, unique(colname))) |>
+  group_by(colname, old_cat) |>
+  summarize(n = n(), .groups = "drop") |>
+  select(-n) |>
+  mutate(new_cat = NA) |>
+  write_csv("inst/extdata/processed_data_old_cat.csv")
+```
+
+```{r Read processed data new categories, include=FALSE}
+processed_data_new_cat <-
+  read_csv("inst/extdata/processed_data_new_cat.csv", show_col_types = FALSE) |>
+  mutate_at("old_cat", as.character)
+```
+
+```{r table-13, echo=FALSE}
+processed_data_new_cat |>
+  kable(
+    caption = "Table 13. Processed data old and new categories."
+    , format = kable_format
+  ) |>
+  kable_classic() |>
+  column_spec(1:2, extra_css = "vertical-align:top;")
+```
+
+```{r Modify categories in processed data, include=FALSE}
+processed_data2 <-
+  unique(variable_new_type$new_type) |>
+  `names<-`(unique(variable_new_type$new_type)) |>
+  imap(
+    ~ processed_data |>
+      select_at(filter(variable_new_type, new_type == .x)$variable)
+  )
+
+processed_data2$factor <-
+  processed_data2$factor |>
+  mutate_all(as.character) |>
+  mutate(seq = seq(n())) |>
+  gather(colname, old_cat, -seq) |>
+  left_join(processed_data_new_cat, by = join_by(colname, old_cat)) |>
+  select(-old_cat) |>
+  mutate_at("colname", \(x) factor(x, unique(x))) |>
+  spread(colname, new_cat) |>
+  arrange(seq) |>
+  select(-seq) |>
+  mutate_all(as.factor)
+
+processed_data2 <-
+  processed_data2 |>
+  reduce(cbind) |>
+  select_at(colnames(processed_data))
+```
+
+```{r Split nominal categories in processed data, include=FALSE}
+processed_data3 <- list()
+
+for(i in seq(ncol(processed_data2))){
+  processed_data3[[i]] <-
+    processed_data2 |>
+    select(all_of(i))
+  
+  if(is.factor(processed_data2[[i]])){
+    if(!all(str_detect(levels(processed_data2[[i]]), "[:digit:]-"))){
+      processed_data3[[i]] <-
+        processed_data3[[i]] |>
+        mutate(seq = seq(n())) |>
+        gather(old_colname, new_colname, -seq) |>
+        select(-old_colname) |>
+        mutate(
+          new_colname =
+            new_colname |>
+            factor(
+              processed_data_new_cat |>
+                filter(colname == colnames(processed_data2)[i]) |>
+                pull(new_cat) |>
+                unique() |>
+                setdiff(NA)
+            )
+        ) |>
+        mutate(cat = "1-yes") |>
+        spread(new_colname, cat, fill = "0-no") |>
+        arrange(seq) |>
+        select(-seq) |>
+        mutate_all(as.factor)
+      
+      if("(removed)" %in% colnames(processed_data3[[i]])){
+        processed_data3[[i]] <-
+          processed_data3[[i]] |>
+          select_if(colnames(processed_data3[[i]]) != "(removed)")
+      }
+    }
+  }
+}
+
+processed_data3 <-
+  processed_data3 |>
+  reduce(cbind)
+```
+
+```{r Finalize regression-ready data, include=FALSE}
+reg_data <- processed_data3
 ```
 
 # Univariate regression analysis

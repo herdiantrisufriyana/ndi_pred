@@ -1,0 +1,84 @@
+colname,old_cat,new_cat
+socioeconomic_status,1-highest,1-high
+socioeconomic_status,2-second highest,1-high
+socioeconomic_status,3-medium,2-medium
+socioeconomic_status,4-second lowest,3-low
+socioeconomic_status,5-lowest,3-low
+education_status,1-postgraduate,0-high
+education_status,2-college,0-high
+education_status,"3-college,  vocational",0-high
+education_status,4-high school,1-low
+education_status,"5-high school, vocational",1-low
+education_status,6-junior high school,1-low
+education_status,7-elementary school,1-low
+ivf,0-no,0-no
+ivf,1-yes,1-yes
+pe,0-no,0-no
+pe,1-yes,1-yes
+gdm,0-no,0-no
+gdm,1-yes,1-yes
+cs,0-no,0-no
+cs,1-yes,1-yes
+sex,0-female,0-female
+sex,1-male,1-male
+multiple_gestation,0-no,0-no
+multiple_gestation,1-yes,1-yes
+birthtime_scoring,1-born 08:00-16:59,birthtime_day
+birthtime_scoring,2-born 17:00-23:59,birthtime_evening
+birthtime_scoring,3-born 00:00-07:59,birthtime_night
+chorioamnionitis,0-no,0-no
+chorioamnionitis,1-yes,1-yes
+survive,0-no,0-no
+survive,1-yes,1-yes
+rop_severe,0-none/stage I/stage II,0-none/stage I/stage II
+rop_severe,1-stage II+,1-stage II+
+rop_severe,NA,NA
+bpd_grade,0-no BPD,0-no BPD
+bpd_grade,1-mild BPD,1-mild BPD
+bpd_grade,2-moderate/severe BPD,2-moderate/severe BPD
+bpd_grade,NA,NA
+eugr_hc,0-HC z-score at birth >=-1.5,0-HC z-score at birth >=-1.5
+eugr_hc,1-HC z-score at birth <-1.5,1-HC z-score at birth <-1.5
+eugr_hc,NA,NA
+eugr_bw,0-BW z-score at birth >=-1.5,0-BW z-score at birth >=-1.5
+eugr_bw,1-BW z-score at birth <-1.5,1-BW z-score at birth <-1.5
+eugr_bw,NA,NA
+hearing,0-passed,0-passed
+hearing,1-failed,1-failed
+hearing,NA,NA
+bbw_z_qw,1-BW z-score >-1,0-BW z-score >-1
+bbw_z_qw,2-BW z-score >-2 & <=-1,1-BW z-score <=-1
+bbw_z_qw,3-BW z-score >-3 & <=-2,1-BW z-score <=-1
+bbw_z_qw,4-BW z-score <=-3,1-BW z-score <=-1
+bhc_z_qw,1-HC z-score >-1,0-HC z-score >-1
+bhc_z_qw,2-HC z-score >-2 & <=-1,1-HC z-score <=-1
+bhc_z_qw,3-HC z-score >-3 & <=-2,1-HC z-score <=-1
+bhc_z_qw,4-HC z-score <=-3,1-HC z-score <=-1
+resp_supp_raw,1-room air,(removed)
+resp_supp_raw,2-nasal canula with oxygen,(removed)
+resp_supp_raw,3-CPAP,resp_supp_cpap
+resp_supp_raw,4-N-IPPV,resp_supp_nippv
+resp_supp_raw,5-IMV,resp_supp_imv
+resp_supp_raw,6-IMV+iNO/HFOV/HFOV+iNO,resp_supp_comb
+ivh,1-no IVH,0-no IVH
+ivh,2-IVH grade I,1-IVH
+ivh,3-IVH grade II,1-IVH
+ivh,4-IVH grade III,1-IVH
+ivh,"5-IVH grade IV, unilateral",1-IVH
+ivh,"6-IVH grade IV, bilateral/IVH grade III with hydrocephalus",1-IVH
+pvl,1-no PVL,0-no PVL
+pvl,"2-PVL focal, unilateral",1-no PVL
+pvl,"3-PVL focal, bilateral",1-no PVL
+pvl,"4-PVL extensive, bilateral",1-no PVL
+cerebellar_hemorrhage,1-no bleeding,1-no bleeding
+cerebellar_hemorrhage,3-severe bleeding,3-severe bleeding
+ischaemic_stroke,1-no ischemia,0-no ischemia
+ischaemic_stroke,"2-ischemia, unilateral",1-ischemia
+ischaemic_stroke,"3-ischemia, bilateral",1-ischemia
+ischaemic_stroke,"4-ischemia, multiple",1-ischemia
+hs_pda_iv,"1-no PDA/PDA, no intervention",(removed)
+hs_pda_iv,"2-PDA, medical intervention",pda_medical
+hs_pda_iv,"3-PDA, surgical intervention",pda_surgical
+non_nec_surg_abd,"1-no NEC/NEC, no surgery","0-no NEC/NEC, no surgery"
+non_nec_surg_abd,2-SIP/meconium ileus/volvulus/obstruction,"1-NEC with surgery"
+non_nec_surg_abd,3-SIP/meconium ileus/volvulus/obstruction with stomy,"1-NEC with surgery"

@@ -1,0 +1,84 @@
+colname,old_cat,new_cat
+socioeconomic_status,1-highest,NA
+socioeconomic_status,2-second highest,NA
+socioeconomic_status,3-medium,NA
+socioeconomic_status,4-second lowest,NA
+socioeconomic_status,5-lowest,NA
+education_status,1-postgraduate,NA
+education_status,2-college,NA
+education_status,"3-college,  vocational",NA
+education_status,4-high school,NA
+education_status,"5-high school, vocational",NA
+education_status,6-junior high school,NA
+education_status,7-elementary school,NA
+ivf,0-no,NA
+ivf,1-yes,NA
+pe,0-no,NA
+pe,1-yes,NA
+gdm,0-no,NA
+gdm,1-yes,NA
+cs,0-no,NA
+cs,1-yes,NA
+sex,0-female,NA
+sex,1-male,NA
+multiple_gestation,0-no,NA
+multiple_gestation,1-yes,NA
+birthtime_scoring,1-born 08:00-16:59,NA
+birthtime_scoring,2-born 17:00-23:59,NA
+birthtime_scoring,3-born 00:00-07:59,NA
+chorioamnionitis,0-no,NA
+chorioamnionitis,1-yes,NA
+survive,0-no,NA
+survive,1-yes,NA
+rop_severe,0-none/stage I/stage II,NA
+rop_severe,1-stage II+,NA
+rop_severe,NA,NA
+bpd_grade,0-no BPD,NA
+bpd_grade,1-mild BPD,NA
+bpd_grade,2-moderate/severe BPD,NA
+bpd_grade,NA,NA
+eugr_hc,0-HC z-score at birth >=-1.5,NA
+eugr_hc,1-HC z-score at birth <-1.5,NA
+eugr_hc,NA,NA
+eugr_bw,0-BW z-score at birth >=-1.5,NA
+eugr_bw,1-BW z-score at birth <-1.5,NA
+eugr_bw,NA,NA
+hearing,0-passed,NA
+hearing,1-failed,NA
+hearing,NA,NA
+bbw_z_qw,1-BW z-score >-1,NA
+bbw_z_qw,2-BW z-score >-2 & <=-1,NA
+bbw_z_qw,3-BW z-score >-3 & <=-2,NA
+bbw_z_qw,4-BW z-score <=-3,NA
+bhc_z_qw,1-HC z-score >-1,NA
+bhc_z_qw,2-HC z-score >-2 & <=-1,NA
+bhc_z_qw,3-HC z-score >-3 & <=-2,NA
+bhc_z_qw,4-HC z-score <=-3,NA
+resp_supp_raw,1-room air,NA
+resp_supp_raw,2-nasal canula with oxygen,NA
+resp_supp_raw,3-CPAP,NA
+resp_supp_raw,4-N-IPPV,NA
+resp_supp_raw,5-IMV,NA
+resp_supp_raw,6-IMV+iNO/HFOV/HFOV+iNO,NA
+ivh,1-no IVH,NA
+ivh,2-IVH grade I,NA
+ivh,3-IVH grade II,NA
+ivh,4-IVH grade III,NA
+ivh,"5-IVH grade IV, unilateral",NA
+ivh,"6-IVH grade IV, bilateral/IVH grade III with hydrocephalus",NA
+pvl,1-no PVL,NA
+pvl,"2-PVL focal, unilateral",NA
+pvl,"3-PVL focal, bilateral",NA
+pvl,"4-PVL extensive, bilateral",NA
+cerebellar_hemorrhage,1-no bleeding,NA
+cerebellar_hemorrhage,3-severe bleeding,NA
+ischaemic_stroke,1-no ischemia,NA
+ischaemic_stroke,"2-ischemia, unilateral",NA
+ischaemic_stroke,"3-ischemia, bilateral",NA
+ischaemic_stroke,"4-ischemia, multiple",NA
+hs_pda_iv,"1-no PDA/PDA, no intervention",NA
+hs_pda_iv,"2-PDA, medical intervention",NA
+hs_pda_iv,"3-PDA, surgical intervention",NA
+non_nec_surg_abd,"1-no NEC/NEC, no surgery",NA
+non_nec_surg_abd,2-SIP/meconium ileus/volvulus/obstruction,NA
+non_nec_surg_abd,3-SIP/meconium ileus/volvulus/obstruction with stomy,NA
