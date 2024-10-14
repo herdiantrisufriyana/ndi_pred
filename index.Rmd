@@ -261,7 +261,7 @@ raw_data4 <-
   select_at(colnames(raw_data2))
 ```
 
-```{r table-5, eval=FALSE, include=FALSE}
+```{r table-5, echo=FALSE}
 raw_data4 |>
   select(id, survive, death_age) |>
   unique() |>
@@ -276,7 +276,7 @@ raw_data4 |>
   column_spec(1:3, extra_css = "vertical-align:top;")
 ```
 
-```{r table-6, eval=FALSE, include=FALSE}
+```{r table-6, echo=FALSE}
 raw_data4 |>
   select_at(colnames(raw_data1$outcomes)) |>
   unique() |>
@@ -296,7 +296,7 @@ raw_data4 |>
   column_spec(1:3, extra_css = "vertical-align:top;")
 ```
 
-```{r table-7, eval=FALSE, include=FALSE}
+```{r table-7, echo=FALSE}
 list(
     ceiled = mutate(raw_data4, t_death_age = ceiling(death_age))
     , rounded_plus1 = mutate(raw_data4, t_death_age = round(death_age) + 1)
@@ -1474,18 +1474,26 @@ saveRDS(imp_results, "data/imp_results.rds")
 imp_results <- readRDS("data/imp_results.rds")
 ```
 
-```{r Obtain imputed data, include=FALSE}
-imputed_data <- complete(imp_results, 1)
+```{r Obtain imputed data, eval=FALSE, include=FALSE}
+imputed_data <-
+  mice.mids(imp_results, newdata = cleaned_data) |>
+  complete(1)
 
 imputed_data <-
   imputed_data |>
   imap(
     ~ list(
-        select_at(transformed_data, .y)
+        select_at(cleaned_data, .y)
         , select_at(imputed_data, .y)
       )[[ifelse(.y %in% colnames(raw_data1$outcomes), 1, 2)]]
   ) |>
   reduce(cbind)
+
+saveRDS(imputed_data, "data/imputed_data.rds")
+```
+
+```{r Load pre-obtained imputed data, include=FALSE}
+imputed_data <- readRDS("data/imputed_data.rds")
 ```
 
 ```{r Finalize readily-analyzed data, include=FALSE}
@@ -1529,6 +1537,7 @@ variable_desc_type <-
 ```{r Modify descriptive variable-types, include=FALSE}
 desc_data <-
   processed_data |>
+  filter(id %in% train_id) |>
   imap(
     ~ data.frame(
         value =
@@ -1616,7 +1625,7 @@ avg_sd_data <-
 prop_n_data <-
   var$dependent |>
   `names<-`(var$dependent) |>
-  pblapply(
+  lapply(
     \(x)
     desc_data |>
       select_at(c(var$independent, var$covariates)) |>
@@ -1756,6 +1765,7 @@ desc_stats |>
 
 ```{r Write processed data old categories, eval=FALSE, include=FALSE}
 processed_data |>
+  filter(id %in% train_id) |>
   select_if(is.factor) |>
   gather(colname, old_cat) |>
   mutate(colname = factor(colname, unique(colname))) |>
@@ -1881,8 +1891,14 @@ processed_data3 <-
   reduce(cbind)
 ```
 
+```{r Finalize data for modeling and evaluation, include=FALSE}
+modeval_data <- processed_data3
+```
+
 ```{r Finalize regression-ready data, include=FALSE}
-reg_data <- processed_data3
+reg_data <-
+  modeval_data |>
+  filter(id %in% train_id)
 ```
 
 ```{r Regression-ready data new colnames, include=FALSE}
@@ -1997,7 +2013,6 @@ univar_reg <-
 univar_reg  |>
   filter(term != "(Intercept)") |>
   select_at(c("outcome", "variable", "term", "OR", "LB", "UB", "p.value")) |>
-  mutate_at(4:7, round, 3) |>
   mutate(
     variable =
       paste0(
@@ -2005,6 +2020,7 @@ univar_reg  |>
         , ifelse((LB > 1 | UB < 1) & p.value <= 0.05, "*", "")
       )
   ) |>
+  mutate_at(4:7, round, 3) |>
   mutate(outcome = factor(outcome, unique(outcome))) |>
   arrange(outcome, p.value) |>
   mutate(
@@ -2134,7 +2150,7 @@ multivar_adjustment_paired <-
   )
 ```
 
-```{r Conduct multivar reg analysis per pair variable-covariate, include=FALSE}
+```{r Conduct multi reg analysis per pair var-covar, eval=FALSE, include=FALSE}
 multivar_reg_paired <-
   var_reg$dependent |>
   pblapply(
@@ -2181,6 +2197,12 @@ multivar_reg_paired <-
       )
   ) |>
   reduce(rbind)
+
+saveRDS(multivar_reg_paired, "data/multivar_reg_paired.rds")
+```
+
+```{r Load pre-conducted multi reg analysis per pair var-covar, include=FALSE}
+multivar_reg_paired <- readRDS("data/multivar_reg_paired.rds")
 ```
 
 ```{r Identify effect size changes after paired adjustment, include=FALSE}
@@ -2332,6 +2354,13 @@ multivar_reg  |>
     , by = join_by(outcome, variable, term)
   ) |>
   select_at(c("outcome", "variable", "term", "OR", "LB", "UB", "p.value")) |>
+  mutate(
+    variable =
+      paste0(
+        variable
+        , ifelse((LB > 1 | UB < 1) & p.value <= 0.05, "*", "")
+      )
+  ) |>
   mutate_at(4:7, round, 3) |>
   left_join(
     multivar_adjustment |>
@@ -2343,13 +2372,6 @@ multivar_reg  |>
   ) |>
   mutate_at(c("outcome", "variable"), \(x) factor(x, unique(x))) |>
   select(outcome, variable, everything()) |>
-  mutate(
-    variable =
-      paste0(
-        variable
-        , ifelse((LB > 1 | UB < 1) & p.value <= 0.05, "*", "")
-      )
-  ) |>
   arrange(outcome, p.value) |>
   mutate(
     p.value =
@@ -2376,6 +2398,7 @@ multivar_reg_sig <-
     , by = join_by(outcome, variable, term)
   ) |>
   filter((LB > 1 | UB < 1) & p.value <= 0.05) |>
+  mutate(outcome = factor(outcome, unique(outcome))) |>
   arrange(outcome, p.value)
 ```
 
@@ -2502,7 +2525,100 @@ ggarrange(
 )
 ```
 
+# Feature selection
 
+```{r Select predictors for baseline and residual, include=FALSE}
+predictor <-
+  multivar_reg_sig_var |>
+  lapply(\(x) data.frame(new_colname = x)) |>
+  lapply(left_join, reg_data_new_colname, by = join_by(new_colname)) |>
+  lapply(
+    mutate
+    , old_colname = ifelse(is.na(old_colname), new_colname, old_colname)
+  ) |>
+  lapply(
+    left_join
+    , raw_data1 |>
+        imap(~ data.frame(dataset = .y, old_colname = colnames(.x))) |>
+        reduce(rbind)
+    , by = join_by(old_colname)
+  ) |>
+  lapply(
+    mutate
+    , type =
+      ifelse(!str_detect(dataset, "42d$|6w$"), "baseline", "residual")
+  ) |>
+  lapply(select, variable = new_colname, type) |>
+  imap(
+    ~ c("baseline", "residual") |>
+      `names<-`(c("baseline", "residual")) |>
+      lapply(\(x) .x$variable[.x$type == x])
+  )
+```
+
+# Predictive modeling
+
+```{r Determine prediction sequence by competing risks, include=FALSE}
+pred_seq <-
+  list(
+    survive = c("survive")
+    , rop_severe = c("survive", "rop_severe")
+    , bpd = c("survive", "bpd")
+    , bpd_moderate_severe = c("survive", "bpd", "bpd_moderate_severe")
+    , eugr_hc = c("survive", "eugr_hc")
+    , eugr_bw = c("survive", "eugr_bw")
+    , rop_severe = c("survive", "hearing")
+  )
+```
+
+```{r Split data for mod & eval by pre-defined pred & partition, include=FALSE}
+modeval_data_set <-
+  predictor |>
+  imap(
+    ~ list(
+        baseline =
+          modeval_data |>
+          select_at(c(var$s, .y, .x$baseline)) |>
+          unique()
+        , residual =
+          modeval_data |>
+          select_at(c(var$s, var$t, .y, .x$residual)) |>
+          unique()
+      ) |>
+      imap(
+        ~ list(train = train_id, validation = val_id, test = test_id) |>
+          lapply(\(x) filter(.x, id %in% x))
+      )
+  )
+```
+
+```{r Write datasets for modeling & evaluation, eval=FALSE, include=FALSE}
+save_dir <- "inst/extdata/modeval_data_set/"
+if(!dir.exists(save_dir)) dir.create(save_dir, recursive = TRUE)
+
+seq(max(sapply(pred_seq, length))) |>
+  lapply(
+    \(x)
+    modeval_data_set[setdiff(unique(sapply(pred_seq, \(y) y[x])), NA)] |>
+      imap(
+        ~ names(.x) |>
+          lapply(
+            \(y)
+            names(.x[[y]]) |>
+              lapply(
+                \(z)
+                .x[[y]][[z]] |>
+                  write_csv(
+                    paste0(
+                      "inst/extdata/modeval_data_set/"
+                      , "stack", x, "_", .y, "_", y, "_", z, ".csv"
+                    )
+                  )
+              )
+          )
+      )
+  )
+```
 
 
 
