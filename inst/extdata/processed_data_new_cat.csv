@@ -33,10 +33,10 @@ survive,1-yes,1-yes
 rop_severe,0-none/stage I/stage II,0-none/stage I/stage II
 rop_severe,1-stage II+,1-stage II+
 rop_severe,NA,NA
-bpd_grade,0-no BPD,0-no BPD
-bpd_grade,1-mild BPD,1-mild BPD
-bpd_grade,2-moderate/severe BPD,2-moderate/severe BPD
-bpd_grade,NA,NA
+bpd_grade,0-no BPD,bpd*
+bpd_grade,1-mild BPD,(removed)
+bpd_grade,2-moderate/severe BPD,bpd_moderate_severe
+bpd_grade,NA,(missing)
 eugr_hc,0-HC z-score at birth >=-1.5,0-HC z-score at birth >=-1.5
 eugr_hc,1-HC z-score at birth <-1.5,1-HC z-score at birth <-1.5
 eugr_hc,NA,NA
