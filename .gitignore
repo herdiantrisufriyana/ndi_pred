@@ -60,5 +60,6 @@ inst/extdata/Neonatal outcome AI prediction_多維軌跡資料數據盤點 NCKU-
 # Ignore archive
 archive*
 
-# Ignore large files (>25 MB)
+# Ignore large files (>25 MB) or abundant files
 data/correlation_matrix_ps/*
+inst/extdata/modeval_data_set/*
