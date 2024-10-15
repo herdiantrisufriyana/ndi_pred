@@ -440,7 +440,7 @@ val_id <- reduce(val_id, c)
 test_id <- reduce(test_id, c)
 ```
 
-```{r figure-1, include=FALSE}
+```{r figure-1, fig.height=5, fig.width=7, include=FALSE}
 whole_set |>
     mutate(
     set =
@@ -1409,6 +1409,8 @@ correlation_matrix_plot <-
 ```{r figure-3, echo=FALSE, fig.height=5, fig.width=7}
 correlation_matrix_plot
 ```
+
+Figure 3. Correlation matrix. *, based on p-value (frequentist) or 95% CI (Bayesian); †, pair of variable and its missingness; ‡, at least 1 variable was a categorical variable with a category of 1 value; §, insufficient sample size.
 
 ```{r Write pairs with significant correlations, eval=FALSE, include=FALSE}
 correlation_matrix |>
@@ -2525,6 +2527,8 @@ ggarrange(
 )
 ```
 
+Figure 4. Effect size changes before and after adjustment for confounders.
+
 # Feature selection
 
 ```{r Select predictors for baseline and residual, include=FALSE}
@@ -2556,6 +2560,281 @@ predictor <-
   )
 ```
 
+```{r Split data for mod & eval by pre-defined pred & partition, include=FALSE}
+modeval_data_set_ori <-
+  predictor |>
+  lapply(\(x) x[sapply(x, length) > 0]) |>
+  imap(
+    ~ list(
+        baseline =
+          modeval_data |>
+          mutate_if(is.factor, \(x) ifelse(is.na(x), NA, as.numeric(x) - 1)) |>
+          select_at(c(var$s, .y, .x$baseline)) |>
+          rename_at(.y, \(x) "outcome") |>
+          unique()
+        , residual =
+          modeval_data |>
+          mutate_if(is.factor, \(x) ifelse(is.na(x), NA, as.numeric(x) - 1)) |>
+          select_at(c(var$s, .y, var$t, .x$residual)) |>
+          rename_at(.y, \(x) "outcome") |>
+          unique()
+      ) |>
+      imap(
+        ~ list(train = train_id, validation = val_id, test = test_id) |>
+          lapply(\(x) filter(.x, id %in% x))
+      )
+  )
+```
+
+# Dimensional reduction
+
+```{r Dim reduction needed for regression training, include=FALSE}
+dim_red_train_regression <-
+  modeval_data_set_ori |>
+  imap(
+    ~ names(.x) |>
+      lapply(
+        \(x)
+        names(.x[[x]]) |>
+          lapply(
+            \(y)
+            .x[[x]][[y]] |>
+              rename(cat = outcome) |>
+              mutate(outcome = .y, type = x, set = y) |>
+              group_by(outcome, type, set, cat) |>
+              summarize(n = n(), .groups = "drop") |>
+              mutate(pred = sum(!.x[[x]][[y]] %in% c("id", "outcome")))
+          ) |>
+          reduce(rbind)
+      ) |>
+      reduce(rbind)
+  ) |>
+  reduce(rbind) |>
+  filter(set == "train") |>
+  filter(!is.na(cat)) |>
+  group_by(outcome, type, set) |>
+  filter(n == min(n)) |>
+  ungroup() |>
+  mutate(epv = ceiling(n/pred), min_epv = 20) |>
+  mutate(max_pred = floor(n/min_epv))
+```
+
+```{r table-16, echo=FALSE}
+dim_red_train_regression |>
+  mutate(outcome = paste0(outcome, ifelse(pred > max_pred, "*", ""))) |>
+  select(-set) |>
+  kable(
+    caption = "Table 16. Dimensional reduction needed for regression training."
+    , format = kable_format
+  ) |>
+  footnote("*, require dimensional reduction.") |>
+  kable_classic() |>
+  column_spec(1:8, extra_css = "vertical-align:top;")
+```
+
+```{r Prepare dimensional reduction inputs, include=FALSE}
+dr_input <-
+  dim_red_train_regression |>
+  filter(pred > max_pred) |>
+  select(outcome, type, set, pred, max_pred)
+
+dr_input <-
+  seq(nrow(dr_input)) |>
+  lapply(
+    \(x)
+    modeval_data_set_ori[[
+        dr_input$outcome[x]
+      ]][[
+        dr_input$type[x]
+      ]] |>
+      list() |>
+      `names<-`(dr_input$type[x])
+  ) |>
+  `names<-`(dr_input$outcome)
+```
+
+```{r Conduct principal component analysis}
+dr_model <-
+  dr_input |>
+  lapply(lapply, \(x) select(x$train, -id, -outcome)) |>
+  lapply(lapply, \(x) prcomp(x, scale. = TRUE))
+```
+
+```{r Describe dimensional reduction models, include=FALSE}
+dr_model_desc <-
+  dr_model |>
+  imap(
+    ~ names(.x) |>
+      `names<-`(names(.x)) |>
+      lapply(
+        \(x)
+        .x[[x]]$rotation[
+            , dim_red_train_regression |>
+              filter(outcome == .y & type == x) |>
+              pull(max_pred) |>
+              seq()
+            , drop = FALSE
+          ] |>
+          as.data.frame() |>
+          rownames_to_column(var =  "old_dim") |>
+          gather(new_dim, weight, -old_dim) |>
+          mutate(outcome = .y, type = x) |>
+          mutate(
+            pve =
+              c(.x[[x]]$sdev^2/sum(.x[[x]]$sdev^2))[
+                dim_red_train_regression |>
+                  filter(outcome == .y & type == x) |>
+                  pull(max_pred) |>
+                  seq()
+              ] |>
+              sum()
+          ) |>
+          select(outcome, type, pve, everything())
+      ) |>
+      reduce(rbind)
+  ) |>
+  reduce(rbind)
+```
+
+```{r Write new dimension old names, eval=FALSE, include=FALSE}
+dr_model_desc |>
+  select(outcome, type, old_name = new_dim) |>
+  unique() |>
+  mutate(new_name = NA) |>
+  write_csv("inst/extdata/new_dimension_old_name.csv")
+```
+
+```{r Load new dimension new names, include=FALSE}
+new_dimension_new_name <-
+  read_csv("inst/extdata/new_dimension_new_name.csv", show_col_types = FALSE)
+```
+
+```{r Plot dimensional reduction model weights, include=FALSE}
+dr_model_weight_plot <-
+  unique(dr_model_desc$outcome) |>
+  `names<-`(unique(dr_model_desc$outcome)) |>
+  lapply(
+    \(x)
+    unique(filter(dr_model_desc, outcome == x)$type) |>
+      `names<-`(unique(filter(dr_model_desc, outcome == x)$type)) |>
+      lapply(
+        \(y)
+        dr_model_desc |>
+          filter(outcome == x & type == y) |>
+          mutate(
+            direction = ifelse(weight < 0, "-", "+")
+            , weight  = abs(weight)
+          ) |>
+          arrange(new_dim, desc(weight)) |>
+          group_by(new_dim) |>
+          mutate(rank = seq(n())) |>
+          ungroup() |>
+          mutate(old_dim = reorder(paste0(old_dim, "-", rank), rank)) |>
+          left_join(
+            new_dimension_new_name |>
+              rename(new_dim = old_name)
+            , by = join_by(outcome, type, new_dim)
+          ) |>
+          mutate(new_dim = new_name) |>
+          ggplot(aes(old_dim, weight, fill = direction)) +
+          geom_col() +
+          facet_grid(
+            ~ new_dim
+            , scales = "free_x"
+          ) +
+          scale_y_continuous(limits = c(0, max(abs(dr_model_desc$weight)))) +
+          scale_fill_discrete("") +
+          xlab("") +
+          ylab(
+            paste0(
+              "PVE = "
+              , dr_model_desc |>
+                filter(outcome == x & type == y) |>
+                pull(pve) |>
+                unique() |>
+                sapply(\(x) round(x*100, 2))
+              , "%"
+            )
+          ) +
+          theme(
+            axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)
+            , axis.title.y = element_text(size = 9)
+          )
+      )
+  )
+```
+
+```{r figure-5, echo=FALSE, fig.height=3, fig.width=7}
+ggarrange(
+  ggarrange(
+    ggarrange(
+      dr_model_weight_plot$hearing$baseline +
+        theme(legend.position = "none")
+      , dr_model_weight_plot$rop_severe$baseline +
+        theme(legend.position = "none")
+      , ncol = 2
+      , nrow = 1
+      , widths =
+        c(nrow(dr_model_weight_plot$hearing$baseline$data) + 2
+          , nrow(dr_model_weight_plot$rop_severe$baseline$data)
+        )
+      , labels = LETTERS[1:2]
+    )
+    , NULL
+    , ncol = 1
+    , nrow = 2
+    , heights = c(4, 1)
+  )
+  , dr_model_weight_plot$survive$baseline
+  , ncol = 2
+  , nrow = 1
+  , widths =
+    c(nrow(dr_model_weight_plot$hearing$baseline$data) + 2
+      + nrow(dr_model_weight_plot$rop_severe$baseline$data)
+      , nrow(dr_model_weight_plot$survive$baseline$data) +3
+    )
+  , labels = c("", LETTERS[3])
+)
+```
+
+Figure 5. Dimensional reduction model weights for predictors of: (A) failed hearing test baseline prediction; (B) Severe ROP baseline prediction; and (C) survival baseline prediction. PVE, proportion of variance explained
+
+```{r Reduce dimensions using the models, include=FALSE}
+dr_output <-
+  dr_input |>
+  imap(
+    ~ names(.x) |>
+      `names<-`(names(.x)) |>
+      lapply(
+        \(x)
+        names(.x[[x]]) |>
+          `names<-`(names(.x[[x]])) |>
+          lapply(\(y) reduce_dim_pca(dr_input, dr_model, .y, x, y))
+      )
+  )
+```
+
+```{r Change data for mod & eval to dr outputs accordingly, include=FALSE}
+modeval_data_set <-
+  modeval_data_set_ori |>
+  imap(
+    ~ names(.x) |>
+      `names<-`(names(.x)) |>
+      lapply(
+        \(x)
+        list(
+          .x[[x]]
+          , dr_output[[.y]][[x]]
+        )[[
+          ifelse(
+            nrow(filter(dr_model_desc, outcome == .y & type == x)) > 0
+            , 2, 1
+          )
+        ]]
+      )
+  )
+```
+
 # Predictive modeling
 
 ```{r Determine prediction sequence by competing risks, include=FALSE}
@@ -2569,58 +2848,72 @@ pred_seq <-
     , eugr_bw = c("survive", "eugr_bw")
     , rop_severe = c("survive", "hearing")
   )
-```
 
-```{r Split data for mod & eval by pre-defined pred & partition, include=FALSE}
-modeval_data_set <-
-  predictor |>
-  imap(
-    ~ list(
-        baseline =
-          modeval_data |>
-          select_at(c(var$s, .y, .x$baseline)) |>
-          unique()
-        , residual =
-          modeval_data |>
-          select_at(c(var$s, var$t, .y, .x$residual)) |>
-          unique()
-      ) |>
-      imap(
-        ~ list(train = train_id, validation = val_id, test = test_id) |>
-          lapply(\(x) filter(.x, id %in% x))
-      )
-  )
-```
-
-```{r Write datasets for modeling & evaluation, eval=FALSE, include=FALSE}
 save_dir <- "inst/extdata/modeval_data_set/"
 if(!dir.exists(save_dir)) dir.create(save_dir, recursive = TRUE)
+```
 
-seq(max(sapply(pred_seq, length))) |>
-  lapply(
-    \(x)
-    modeval_data_set[setdiff(unique(sapply(pred_seq, \(y) y[x])), NA)] |>
-      imap(
-        ~ names(.x) |>
-          lapply(
-            \(y)
-            names(.x[[y]]) |>
-              lapply(
-                \(z)
-                .x[[y]][[z]] |>
-                  write_csv(
-                    paste0(
-                      "inst/extdata/modeval_data_set/"
-                      , "stack", x, "_", .y, "_", y, "_", z, ".csv"
-                    )
-                  )
-              )
-          )
+
+```{r Show prediction sequence by competing risks, echo=FALSE}
+pred_seq |>
+  imap(~ paste0(.y, ": ", paste0(.x, collapse = " -> "))) |>
+  unlist() |>
+  paste0(collapse = "\n") |>
+  cat()
+```
+
+## Survival prediction
+
+```{r Survival prediction - Write baseline, eval=FALSE, include=FALSE}
+modeval_data_set$survive$baseline |>
+  imap(
+    ~ .x |>
+      write_csv(
+        paste0("inst/extdata/modeval_data_set/survive_baseline1_", .y, ".csv")
       )
   )
 ```
 
+```{r Survival prediction - Write residual, eval=FALSE, include=FALSE}
+compute_residual(
+    base_df_list =  modeval_data_set$survive$baseline
+    , resid_df_list = modeval_data_set$survive$residual
+    , model_dir = "inst/extdata/model/"
+    , outcome = "survive"
+    , stack = 1
+  ) |>
+  imap(
+    ~ .x |>
+      write_csv(
+        paste0(
+          "inst/extdata/modeval_data_set/survive_residual1_", .y, ".csv"
+        )
+      )
+  )
+```
 
+```{r Survival prediction - Baseline results, include=FALSE}
+survive_baseline1 <-
+  obtain_outcome_pred(
+    prefix = "survive_baseline1"
+    , data_dir = "inst/extdata/modeval_data_set/"
+    , model_dir = "inst/extdata/model/"
+  )
+```
+
+```{r Survival prediction - Residual results, include=FALSE}
+survive_residual1 <-
+  obtain_outcome_pred(
+    prefix = "survive_residual1"
+    , data_dir = "inst/extdata/modeval_data_set/"
+    , model_dir = "inst/extdata/model/"
+    , task = "regression"
+  )
+```
+
+```{r Survival prediction - Stack results, include=FALSE}
+survive_stack <- stack_prediction(survive_baseline1, survive_residual1)
+```
 
 
 
