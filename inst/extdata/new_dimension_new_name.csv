@@ -1,0 +1,7 @@
+outcome,type,old_name,new_name
+survive,baseline,PC1,an_dev
+survive,baseline,PC2,pn_lungdev
+survive,baseline,PC3,prematurity
+rop_severe,baseline,PC1,an_bg
+rop_severe,baseline,PC2,pe_fsex
+hearing,baseline,PC1,pn_bh
