@@ -1,4 +1,4 @@
-obtain_outcome_pred <-
+obtain_obs_pred <-
   function(
       prefix
       , data_dir
@@ -9,13 +9,13 @@ obtain_outcome_pred <-
     `names<-`(set, set) |>
       lapply(
         \(x)
-        cbind(
-          read_csv(
-              paste0(data_dir, prefix, "_", x, ".csv")
-              , show_col_types = F
-            ) |>
-            select(id, outcome)
-          , read_csv(
+        read_csv(
+            paste0(data_dir, prefix, "_", x, ".csv")
+            , show_col_types = F
+          ) |>
+          select(id, outcome) |>
+          cbind(
+            read_csv(
               paste0(
                 model_dir, prefix, "_", x, "_"
                 , ifelse(task == "classification", "prob", "predictions")
@@ -23,6 +23,8 @@ obtain_outcome_pred <-
               )
               , show_col_types = F
             )
-        )
+          ) |>
+          `colnames<-`(c("id", "obs", "pred")) |>
+          mutate_at("obs", as.factor)
       )
   }
