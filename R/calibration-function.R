@@ -23,8 +23,12 @@ calibration <- function(eval_df, binwidth = 1, boot = 30, seed){
         method = "lm", formula = y ~ x, color = "black", na.rm = TRUE
       ) +
       coord_equal() +
-      scale_x_continuous(limits = 0:1, breaks = seq(0, 1, 0.1)) +
-      scale_y_continuous(limits = 0:1, breaks = seq(0, 1, 0.1)) +
+      scale_x_continuous(
+        "Predicted probability", limits = 0:1, breaks = seq(0, 1, 0.1)
+      ) +
+      scale_y_continuous(
+        "True probability", limits = 0:1, breaks = seq(0, 1, 0.1)
+      ) +
       theme_classic()
     
     calib_dist <-
@@ -34,8 +38,10 @@ calibration <- function(eval_df, binwidth = 1, boot = 30, seed){
       ggplot(aes(pred, n)) +
       geom_col(width = 0.075, na.rm = TRUE) +
       facet_grid(obs ~ ., scales = "free_y") +
-      scale_x_continuous(limits = c(-0.1, 1.1), breaks = seq(0, 1, 0.1)) +
-      scale_y_continuous(trans = "log10") +
+      scale_x_continuous(
+        "Predicted probability", limits = c(-0.1, 1.1), breaks = seq(0, 1, 0.1)
+      ) +
+      scale_y_continuous("Frequency (n)", trans = "log10") +
       theme_classic()
     
     sqr_error <-
