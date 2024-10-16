@@ -3878,7 +3878,7 @@ pred_results_train <-
 selected_pred_results <- list()
 ```
 
-```{r Truely (~90%)-predicted die in 14-42 days, include=FALSE}
+```{r Truly (~90%)-predicted die in 14-42 days, include=FALSE}
 selected_pred_results$die_14_to_42_day_true <-
   pred_results_train |>
   filter(
@@ -3908,7 +3908,7 @@ selected_pred_results$die_14_to_42_day_false <-
   )
 ```
 
-```{r Truely (~50%)-predicted survive, include=FALSE}
+```{r Truly (~50%)-predicted survive, include=FALSE}
 selected_pred_results$survive_true <-
   pred_results_train |>
   filter(
@@ -3940,7 +3940,7 @@ selected_pred_results$survive_false <-
   )
 ```
 
-```{r Truely (~20%)-pred ous among truely (~50%)-pred survivors, include=FALSE}
+```{r Truly (~20%)-pred ous among truly (~50%)-pred survivors, include=FALSE}
 selected_pred_results$other_outcomes_true <-
   selected_pred_results$survive_true |>
   filter(
@@ -3965,7 +3965,7 @@ selected_pred_results$other_outcomes_true <-
   )
 ```
 
-```{r Falsely (~20%)-pred ous among truely (~50%)-pred survivors, include=FALSE}
+```{r Falsely (~20%)-pred ous among truly (~50%)-pred survivors, include=FALSE}
 selected_pred_results$other_outcomes_false <-
   selected_pred_results$survive_true |>
   filter(
@@ -4062,7 +4062,7 @@ demo_trajectories |>
   )
 ```
 
-Figure 18. A case with ~50% truely-predicted survive and ~20% truely-predicted positives for other outcomes.
+Figure 18. A case with ~50% truly-predicted survive and ~20% truly-predicted positives for other outcomes.
 
 ```{r Plot demo trajectories, include=FALSE}
 demo_trajectories_plot <-
@@ -4110,13 +4110,13 @@ demo_trajectories_plot <-
 demo_trajectories_plot[[1]]
 ```
 
-Figure 19. Survival trajectories with ~90% truely and 1+ falsely predicted deaths and ~20% falsely predicted survive. Vertical dashed line indicates death age.
+Figure 19. Survival trajectories with ~90% truly and 1+ falsely predicted deaths and ~20% falsely predicted survive. Vertical dashed line indicates death age.
 
 ```{r figure-20, echo=FALSE, fig.height=5, fig.width=7}
 demo_trajectories_plot[[2]]
 ```
 
-Figure 20. Other outcome trajectories with ~20% truely and ~20% falsely predicted outcomes among ~50% truely predicted survive.
+Figure 20. Other outcome trajectories with ~20% truly and ~20% falsely predicted outcomes among ~50% truly predicted survive.
 
 
 
