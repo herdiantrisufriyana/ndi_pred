@@ -3811,7 +3811,7 @@ cm_summary <-
   select(model, `AUC-ROC`, TH, everything())
 ```
 
-```{r table-17, include=FALSE}
+```{r table-17, echo=FALSE}
 cm_summary |>
   kable(
     caption = "Table 17. Predictive performance using test set."
