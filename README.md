@@ -32,7 +32,9 @@ jupyter-lab --ip=0.0.0.0 --no-browser --allow-root
 
 Click a link in the results to open jupyter lab in a browser.
 
+## Vignette
 
+[Progress report](https://herdiantrisufriyana.github.io/ndi_pred/index.html)
 
 
 
