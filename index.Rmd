@@ -440,7 +440,7 @@ val_id <- reduce(val_id, c)
 test_id <- reduce(test_id, c)
 ```
 
-```{r figure-1, fig.height=5, fig.width=7, include=FALSE}
+```{r figure-1, echo=FALSE, fig.height=5, fig.width=7}
 whole_set |>
     mutate(
     set =
