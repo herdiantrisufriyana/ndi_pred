@@ -2356,14 +2356,6 @@ multivar_reg  |>
     , by = join_by(outcome, variable, term)
   ) |>
   select_at(c("outcome", "variable", "term", "OR", "LB", "UB", "p.value")) |>
-  mutate(
-    variable =
-      paste0(
-        variable
-        , ifelse((LB > 1 | UB < 1) & p.value <= 0.05, "*", "")
-      )
-  ) |>
-  mutate_at(4:7, round, 3) |>
   left_join(
     multivar_adjustment |>
       imap(~ select(mutate(.x, outcome = .y), outcome, everything())) |>
@@ -2372,6 +2364,14 @@ multivar_reg  |>
       mutate_at("covariates", str_replace_all, "\\+", ", ")
     , by = join_by(outcome, variable)
   ) |>
+  mutate(
+    variable =
+      paste0(
+        variable
+        , ifelse((LB > 1 | UB < 1) & p.value <= 0.05, "*", "")
+      )
+  ) |>
+  mutate_at(4:7, round, 3) |>
   mutate_at(c("outcome", "variable"), \(x) factor(x, unique(x))) |>
   select(outcome, variable, everything()) |>
   arrange(outcome, p.value) |>
@@ -4116,7 +4116,7 @@ Figure 19. Survival trajectories with ~90% truely and 1+ falsely predicted death
 demo_trajectories_plot[[2]]
 ```
 
-Figure 20. Other outcome trajectories with ~20% truely and ~20% falsely predicted deaths among ~50% truely predicted survive.
+Figure 20. Other outcome trajectories with ~20% truely and ~20% falsely predicted outcomes among ~50% truely predicted survive.
 
 
 
