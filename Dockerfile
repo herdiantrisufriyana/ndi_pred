@@ -34,9 +34,9 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Download and install Miniconda to /opt/conda, a directory accessible by the rstudio user
-RUN curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
-    bash Miniconda3-latest-Linux-x86_64.sh -b -p /opt/conda && \
-    rm Miniconda3-latest-Linux-x86_64.sh
+RUN curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh && \
+    bash Miniconda3-latest-Linux-aarch64.sh -b -p /opt/conda && \
+    rm Miniconda3-latest-Linux-aarch64.sh
 
 # Add Conda to the PATH and initialize Conda globally for all users
 ENV PATH="/opt/conda/bin:$PATH"
