@@ -1,36 +1,58 @@
 # Neonatal Outcomes AI Prediction using Multimodal Trajectory Database
 
-## Installation
+## System requirements
 
-Modify Dockerfile according to AMD64 or ARM64.
+Install Docker desktop once in your machine. Start the service every time you build this project image or run the container.
 
-https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh
+## Installation guide
 
-Change `$(pwd)` with the absolute path of the project folder.
+Build the project image once for a new machine (currently support AMD64 and ARM64).
 
 ```{bash}
 docker build -t ndi_pred --load .
+```
+
+Run the container every time you start working on the project. Change left-side port numbers for either Rstudio or Jupyter lab if any of them is already used by other applications.
+
+In terminal:
+
+```{bash}
 docker run -d -p 8787:8787 -p 8888:8888 -v "$(pwd)":/home/rstudio/project --name ndi_pred_container ndi_pred
 ```
+
+In command prompt:
+
+```{bash}
+docker run -d -p 8787:8787 -p 8888:8888 -v "%cd%":/home/rstudio/project --name ndi_pred_container ndi_pred
+```
+
+## Instructions for use
+
+### Rstudio
+
+Change port number in the link, accordingly, if it is already used by other applications.
 
 Visit http://localhost:8787.
 Username: rstudio
 Password: 1234
 
-Run this line in console everytime running the image:
+Your working directory is ~/project.
 
-```{r}
-setwd("~/project")
+### Jupyter lab
+
+Use terminal/command prompt to run the container terminal.
+
+```{bash}
+docker exec -it ndi_pred_container bash
 ```
 
-Use terminal in RStudio to run jupyter lab using this line of codes.
+In the container terminal, run jupyter lab using this line of codes.
 
 ```{bash}
 jupyter-lab --ip=0.0.0.0 --no-browser --allow-root
 ```
 
-Click a link in the results to open jupyter lab in a browser.
+Click a link in the results to open jupyter lab in a browser. Change port number in the link, accordingly, if it is already used by other applications.
 
 ## Vignette
 
