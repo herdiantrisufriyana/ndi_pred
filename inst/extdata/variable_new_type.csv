@@ -36,8 +36,8 @@ resp_supp_agg_cum_day_pct,numeric,numeric
 fio2_cum_day_pct,numeric,numeric
 fio2_cum_level_pct,numeric,numeric
 steroid_postnatal,numeric,numeric
-bbw_z_qw,numeric,factor
-bhc_z_qw,numeric,factor
+bw_z_qw,numeric,factor
+hc_z_qw,numeric,factor
 resp_supp_raw,numeric,factor
 fio2_raw,numeric,numeric
 inotropic,numeric,numeric

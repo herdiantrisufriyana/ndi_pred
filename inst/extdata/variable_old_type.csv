@@ -36,8 +36,8 @@ resp_supp_agg_cum_day_pct,numeric,NA
 fio2_cum_day_pct,numeric,NA
 fio2_cum_level_pct,numeric,NA
 steroid_postnatal,numeric,NA
-bbw_z_qw,numeric,NA
-bhc_z_qw,numeric,NA
+bw_z_qw,numeric,NA
+hc_z_qw,numeric,NA
 resp_supp_raw,numeric,NA
 fio2_raw,numeric,NA
 inotropic,numeric,NA
