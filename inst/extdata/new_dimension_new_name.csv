@@ -1,6 +1,6 @@
 outcome,type,old_name,new_name
-survive,baseline,PC1,an_dev
-survive,baseline,PC2,pn_lungdev
-survive,baseline,PC3,prematurity
-rop_severe,baseline,PC1,an_bg
-rop_severe,baseline,PC2,pe_fsex
+survive,baseline,PC1,as5_pc
+survive,baseline,PC2,maternal_age_pc
+survive,baseline,PC3,bbw_z_pc
+rop_severe,baseline,PC1,pe_pc
+rop_severe,baseline,PC2,se_pc
