@@ -29,6 +29,7 @@ library(mice)
 filter <- dplyr::filter
 cbind <- base::cbind
 rbind <- base::rbind
+tidy <- broom.mixed::tidy
 library(parallel)
 library(doParallel)
 library(survival)
@@ -389,8 +390,14 @@ raw_data5 <-
   filter(is.na(death_age) | t <= (round(death_age) + 1))
 ```
 
+```{r Remove raw_ variables, include=FALSE}
+raw_data6 <-
+  raw_data5 |>
+  select_if(!str_detect(colnames(raw_data5), "bbw_g|raw"))
+```
+
 ```{r Finalize cleaned data, include=FALSE}
-cleaned_data <- raw_data5
+cleaned_data <- raw_data6
 ```
 
 ## Data partition
@@ -487,15 +494,16 @@ normal_qq <-
   normal_qq |>
   length() |>
   seq() |>
-  split(LETTERS[1:3]) |>
+  split(LETTERS[1:4]) |>
   data.frame() |>
   pmap(
-    \(A, B, C)
+    \(A, B, C, D)
     ggarrange(
       normal_qq[[A]]
       , normal_qq[[B]]
       , normal_qq[[C]]
-      , ncol = 3
+      , normal_qq[[D]]
+      , ncol = 4
     )
   )
 
@@ -508,15 +516,12 @@ normal_qq <-
     , normal_qq[[5]]
     , normal_qq[[6]]
     , normal_qq[[7]]
-    , normal_qq[[8]]
-    , normal_qq[[9]]
-    , normal_qq[[10]]
     , ncol = 1
-    , nrow = 10
+    , nrow = 7
   )
 ```
 
-```{r figure-2, echo=FALSE, fig.height=50, fig.width=15}
+```{r figure-2, echo=FALSE, fig.height=35, fig.width=20}
 normal_qq
 ```
 
@@ -527,7 +532,6 @@ var_num_normal_qq <-
   c("t"
     , "maternal_age"
     , "gravida"
-    , "bbw_g"
     , "ga_wk"
     , "as1"
     , "as5"
@@ -890,7 +894,6 @@ trans_ps_num_exception <-
   c("t"
     ,"maternal_age"
     , "gravida"
-    , "bbw_g"
     , "ga_wk"
     , "as1"
     , "as5"
@@ -1525,6 +1528,9 @@ var$independent <-
   unique() |>
   setdiff(c(var$s, var$t, "t_day", "t_wk", "ga_wk", "death_age"))
 
+var$independent <-
+  var$independent[!str_detect(var$independent, "raw")]
+
 var$covariates=
   processed_data %>%
   colnames() %>%
@@ -1594,7 +1600,7 @@ avg_sd_data <-
   lapply(
     \(x)
     desc_data |>
-      select_at(c(var$independent, var$covariates, var$dependent[var$dependent != x])) |>
+      select_at(c(var$independent, var$covariates)) |>
       select_if(is.numeric) |>
       mutate(seq = seq(n())) |>
       gather(variable, value, -seq) |>
@@ -1769,6 +1775,7 @@ desc_stats |>
 processed_data |>
   filter(id %in% train_id) |>
   select_if(is.factor) |>
+  mutate_all(as.character) |>
   gather(colname, old_cat) |>
   mutate(colname = factor(colname, unique(colname))) |>
   group_by(colname, old_cat) |>
@@ -1801,7 +1808,10 @@ processed_data2 <-
   `names<-`(unique(variable_new_type$new_type)) |>
   imap(
     ~ processed_data |>
-      select_at(filter(variable_new_type, new_type == .x)$variable)
+      select_at(
+        filter(variable_new_type, new_type == .x)$variable |>
+          intersect(colnames(cleaned_data))
+      )
   )
 
 processed_data2$factor <-
@@ -1956,6 +1966,29 @@ var_reg <-
   )
 ```
 
+```{r Identify non-daily-checked variables, include=FALSE}
+non_daily_checked_var <-
+  raw_data1[c("infection_42d","morbidities_42d")] |>
+  lapply(colnames) |>
+  unlist() |>
+  unique()|>
+  lapply(
+    \(x)
+    data.frame(old_colname = x) |>
+      left_join(
+        reg_data_new_colname
+        , by = join_by(old_colname)
+      ) |>
+      mutate(
+        old_colname = ifelse(is.na(new_colname), old_colname, new_colname)
+      ) |>
+      select(-new_colname) |>
+      rename(variable = old_colname) |>
+      pull(variable)
+  ) |>
+  unlist()
+```
+
 # Univariate regression analysis
 
 ```{r Conduct univariate regression analysis, include=FALSE}
@@ -1995,7 +2028,7 @@ univar_reg <-
           )
         )
       ) |>
-      lapply(tidy) |>
+      lapply(tidy_more) |>
       imap( ~ mutate(.x, outcome = x, variable = .y)) |>
       lapply(\(x) select_if(x, colnames(x) != "robust.se")) |>
       reduce(rbind) |>
@@ -2141,7 +2174,17 @@ multivar_adjustment_paired <-
     ~ .x |>
       right_join(data.frame(to = univar_reg_sig_var[[.y]]), by = join_by(to)) |>
       select(variable = to, covariates = from) |>
-      mutate(covariates = paste0(variable, "+", covariates)) |>
+      mutate(
+        covariates =
+          paste0(
+            variable
+            , ifelse(
+                is.na(covariates) | covariates == "NA"
+                , ""
+                , paste0("+", covariates)
+              )
+          )
+      ) |>
       mutate(formula = paste0(.y, "~", covariates)) |>
       mutate(
         covariates = str_remove_all(covariates, paste0(variable, "\\+*"))
@@ -2168,13 +2211,31 @@ multivar_reg_paired <-
               formula = x
               , data =
                 reg_data |>
+                select_at(
+                  c(outcome_variable_unit_reg |>
+                      filter(outcome == as.character(x)[2]) |>
+                      filter(
+                        variable
+                        %in% str_split(
+                          as.character(x)[3], pattern = " \\+ "
+                        )[[1]]
+                      ) |>
+                      pull(unit) |>
+                      str_split("\\|") |>
+                      unlist() |>
+                      unique()
+                    , as.character(x)[2]
+                    , str_split(as.character(x)[3], pattern = " \\+ ")[[1]]
+                  )
+                ) |>
                 mutate_at(
                   as.character(x)[2]
                   , \(x) ifelse(x == levels(x)[1], 0, 1)
-                )
+                ) |>
+                unique()
             )
           ) |>
-          tidy() |>
+          tidy_more() |>
           list() |>
           c(list(formula = x))
       ) |>
@@ -2257,7 +2318,7 @@ covariate_df <-
           mutate(variable = variable2, covariates = covariates2) |>
           select(-variable2, -covariates2)
       ) |>
-      filter(outcome == "survive") |>
+      filter(outcome == x) |>
       filter(es_change %in% c("smaller")) |>
       select(from = variable, to = covariates) |>
       unique() |>
@@ -2312,13 +2373,31 @@ multivar_reg <-
             formula = x
             , data =
               reg_data |>
+              select_at(
+                c(outcome_variable_unit_reg |>
+                    filter(outcome == as.character(x)[2]) |>
+                    filter(
+                      variable
+                      %in% str_split(
+                        as.character(x)[3], pattern = " \\+ "
+                      )[[1]]
+                    ) |>
+                    pull(unit) |>
+                    str_split("\\|") |>
+                    unlist() |>
+                    unique()
+                  , as.character(x)[2]
+                  , str_split(as.character(x)[3], pattern = " \\+ ")[[1]]
+                )
+              ) |>
               mutate_at(
                 as.character(x)[2]
                 , \(x) ifelse(x == levels(x)[1], 0, 1)
-              )
+              ) |>
+              unique()
           )
         ) |>
-          tidy() |>
+          tidy_more() |>
           list() |>
           c(list(formula = x))
       ) |>
@@ -2846,7 +2925,6 @@ pred_seq <-
 save_dir <- "inst/extdata/modeval_data_set/"
 if(!dir.exists(save_dir)) dir.create(save_dir, recursive = TRUE)
 ```
-
 
 ```{r Show prediction sequence by competing risks, echo=FALSE}
 pred_seq |>
