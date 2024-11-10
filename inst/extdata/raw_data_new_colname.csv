@@ -50,8 +50,8 @@ gi_tract_feeding_42d,Age_D,t_day
 gi_tract_feeding_42d,Feeding,feeding
 growth_hc_bw_6w,ID,id
 growth_hc_bw_6w,Age_W,t_wk
-growth_hc_bw_6w,Postnatal_BW_z_score_QW,bbw_z_qw
-growth_hc_bw_6w,Postnatal_HC_z_score_QW,bhc_z_qw
+growth_hc_bw_6w,Postnatal_BW_z_score_QW,bw_z_qw
+growth_hc_bw_6w,Postnatal_HC_z_score_QW,hc_z_qw
 morbidities_42d,ID,id
 morbidities_42d,Age_D,t_day
 morbidities_42d,IVH,ivh
