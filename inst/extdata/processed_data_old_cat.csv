@@ -46,20 +46,14 @@ eugr_bw,NA,NA
 hearing,0-passed,NA
 hearing,1-failed,NA
 hearing,NA,NA
-bbw_z_qw,1-BW z-score >-1,NA
-bbw_z_qw,2-BW z-score >-2 & <=-1,NA
-bbw_z_qw,3-BW z-score >-3 & <=-2,NA
-bbw_z_qw,4-BW z-score <=-3,NA
-bhc_z_qw,1-HC z-score >-1,NA
-bhc_z_qw,2-HC z-score >-2 & <=-1,NA
-bhc_z_qw,3-HC z-score >-3 & <=-2,NA
-bhc_z_qw,4-HC z-score <=-3,NA
-resp_supp_raw,1-room air,NA
-resp_supp_raw,2-nasal canula with oxygen,NA
-resp_supp_raw,3-CPAP,NA
-resp_supp_raw,4-N-IPPV,NA
-resp_supp_raw,5-IMV,NA
-resp_supp_raw,6-IMV+iNO/HFOV/HFOV+iNO,NA
+bw_z_qw,1-BW z-score >-1,NA
+bw_z_qw,2-BW z-score >-2 & <=-1,NA
+bw_z_qw,3-BW z-score >-3 & <=-2,NA
+bw_z_qw,4-BW z-score <=-3,NA
+hc_z_qw,1-HC z-score >-1,NA
+hc_z_qw,2-HC z-score >-2 & <=-1,NA
+hc_z_qw,3-HC z-score >-3 & <=-2,NA
+hc_z_qw,4-HC z-score <=-3,NA
 ivh,1-no IVH,NA
 ivh,2-IVH grade I,NA
 ivh,3-IVH grade II,NA
