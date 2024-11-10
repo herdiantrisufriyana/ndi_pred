@@ -2028,7 +2028,7 @@ univar_reg <-
           )
         )
       ) |>
-      lapply(tidy_more) |>
+      lapply(tidy) |>
       imap( ~ mutate(.x, outcome = x, variable = .y)) |>
       lapply(\(x) select_if(x, colnames(x) != "robust.se")) |>
       reduce(rbind) |>
@@ -2235,7 +2235,7 @@ multivar_reg_paired <-
                 unique()
             )
           ) |>
-          tidy_more() |>
+          tidy() |>
           list() |>
           c(list(formula = x))
       ) |>
@@ -2397,7 +2397,7 @@ multivar_reg <-
               unique()
           )
         ) |>
-          tidy_more() |>
+          tidy() |>
           list() |>
           c(list(formula = x))
       ) |>
