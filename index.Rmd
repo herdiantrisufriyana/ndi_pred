@@ -3180,6 +3180,21 @@ survive_stack_eval_discrimination |>
   cat()
 ```
 
+```{r Survival prediction - Required features, include=FALSE}
+survive_pred_features <-
+  c(baseline = "survive_baseline1_rr", stack = "survive_stack_gbm") |>
+  obtain_pred_features(
+    list(
+      survive_baseline1_rr =
+        dr_model_desc |>
+        filter(outcome == "survive" & type == "baseline" & min_epv == "20")
+      , survive_stack_gbm =
+        dr_model_desc |>
+        filter(outcome == "survive" & type == "residual" & min_epv == "150")
+    )
+  )
+```
+
 ## Severe ROP prediction
 
 ```{r Severe ROP prediction - Write stack, include=FALSE}
@@ -3270,6 +3285,27 @@ rop_severe_stack_eval_discrimination <-
 rop_severe_stack_eval_discrimination |>
   select_best_auroc_lb_model() |>
   cat()
+```
+
+```{r Severe ROP prediction - Required features, include=FALSE}
+rop_severe_pred_features <-
+  c(baseline = "survive_baseline1_rr"
+    , stack1 = "survive_stack_gbm"
+    , stack2 = "rop_severe_stack_rr"
+  ) |>
+  obtain_pred_features(
+    list(
+      survive_baseline1_rr =
+        dr_model_desc |>
+        filter(outcome == "survive" & type == "baseline" & min_epv == "20")
+      , survive_stack_gbm =
+        dr_model_desc |>
+        filter(outcome == "survive" & type == "residual" & min_epv == "150")
+      , rop_severe_stack_rr =
+        dr_model_desc |>
+        filter(outcome == "rop_severe" & type == "residual" & min_epv == "20")
+    )
+  )
 ```
 
 ## BPD prediction
@@ -3364,6 +3400,27 @@ bpd_stack_eval_discrimination |>
   cat()
 ```
 
+```{r BPD prediction - Required features, include=FALSE}
+bpd_pred_features <-
+  c(baseline = "survive_baseline1_rr"
+    , stack1 = "survive_stack_gbm"
+    , stack2 = "bpd_stack_rf"
+  ) |>
+  obtain_pred_features(
+    list(
+      survive_baseline1_rr =
+        dr_model_desc |>
+        filter(outcome == "survive" & type == "baseline" & min_epv == "20")
+      , survive_stack_gbm =
+        dr_model_desc |>
+        filter(outcome == "survive" & type == "residual" & min_epv == "150")
+      , bpd_stack_rf =
+        dr_model_desc |>
+        filter(outcome == "bpd" & type == "residual" & min_epv == "150")
+    )
+  )
+```
+
 ## Moderate/severe BPD prediction
 
 ```{r Mod/sev BPD prediction - Write stack, include=FALSE}
@@ -3454,6 +3511,35 @@ bpd_moderate_severe_stack_eval_discrimination <-
 bpd_moderate_severe_stack_eval_discrimination |>
   select_best_auroc_lb_model() |>
   cat()
+```
+
+```{r Mod/sev BPD prediction - Required features, include=FALSE}
+bpd_moderate_severe_pred_features <-
+  c(baseline = "survive_baseline1_rr"
+    , stack1 = "survive_stack_gbm"
+    , stack2 = "bpd_stack_rf"
+    , stack3 = "bpd_moderate_severe_stack_dnn"
+  ) |>
+  obtain_pred_features(
+    list(
+      survive_baseline1_rr =
+        dr_model_desc |>
+        filter(outcome == "survive" & type == "baseline" & min_epv == "20")
+      , survive_stack_gbm =
+        dr_model_desc |>
+        filter(outcome == "survive" & type == "residual" & min_epv == "150")
+      , bpd_stack_rf =
+        dr_model_desc |>
+        filter(outcome == "bpd" & type == "residual" & min_epv == "150")
+      , bpd_moderate_severe_stack_dnn =
+        dr_model_desc |>
+        filter(
+          outcome == "bpd_moderate_severe"
+          & type == "residual"
+          & min_epv == "200"
+        )
+    )
+  )
 ```
 
 ## EUGR-HC prediction
@@ -3692,6 +3778,31 @@ eugr_hc_stack_eval_discrimination |>
   cat()
 ```
 
+```{r EUGR-HC prediction - Required features, include=FALSE}
+eugr_hc_pred_features <-
+  c(baseline1 = "survive_baseline1_rr"
+    ,baseline2 = "eugr_hc_baseline2_rr"
+    , stack1 = "eugr_hc_stack1_dnn"
+    , stack2 = "eugr_hc_stack_rr"
+  ) |>
+  obtain_pred_features(
+    list(
+      survive_baseline1_rr =
+        dr_model_desc |>
+        filter(outcome == "survive" & type == "baseline" & min_epv == "20")
+      , eugr_hc_baseline2_rr =
+        dr_model_desc |>
+        filter(outcome == "eugr_hc" & type == "baseline" & min_epv == "20")
+      , eugr_hc_stack1_dnn =
+        dr_model_desc |>
+        filter(outcome == "survive" & type == "residual" & min_epv == "200")
+      , eugr_hc_stack_rr =
+        dr_model_desc |>
+        filter(outcome == "eugr_hc" & type == "residual" & min_epv == "20")
+    )
+  )
+```
+
 ## EUGR-BW prediction
 
 ```{r EUGR-BW prediction - Write baseline 2, include=FALSE}
@@ -3928,6 +4039,31 @@ eugr_bw_stack_eval_discrimination |>
   cat()
 ```
 
+```{r EUGR-BW prediction - Required features, include=FALSE}
+eugr_bw_pred_features <-
+  c(baseline1 = "survive_baseline1_rr"
+    ,baseline2 = "eugr_bw_baseline2_rr"
+    , stack1 = "eugr_bw_stack1_rr"
+    , stack2 = "eugr_bw_stack_rr"
+  ) |>
+  obtain_pred_features(
+    list(
+      survive_baseline1_rr =
+        dr_model_desc |>
+        filter(outcome == "survive" & type == "baseline" & min_epv == "20")
+      , eugr_bw_baseline2_rr =
+        dr_model_desc |>
+        filter(outcome == "eugr_bw" & type == "baseline" & min_epv == "20")
+      , eugr_bw_stack1_rr =
+        dr_model_desc |>
+        filter(outcome == "survive" & type == "residual" & min_epv == "20")
+      , eugr_bw_stack_rr =
+        dr_model_desc |>
+        filter(outcome == "eugr_bw" & type == "residual" & min_epv == "20")
+    )
+  )
+```
+
 ## Failed hearing test prediction
 
 ```{r Failed hearing prediction - Write stack, include=FALSE}
@@ -4018,6 +4154,27 @@ hearing_stack_eval_discrimination <-
 hearing_stack_eval_discrimination |>
   select_best_auroc_lb_model() |>
   cat()
+```
+
+```{r Failed hearing prediction - Required features, include=FALSE}
+hearing_pred_features <-
+  c(baseline = "survive_baseline1_rr"
+    , stack1 = "survive_stack_gbm"
+    , stack2 = "hearing_stack_rr"
+  ) |>
+  obtain_pred_features(
+    list(
+      survive_baseline1_rr =
+        dr_model_desc |>
+        filter(outcome == "survive" & type == "baseline" & min_epv == "20")
+      , survive_stack_gbm =
+        dr_model_desc |>
+        filter(outcome == "survive" & type == "residual" & min_epv == "150")
+      , hearing_stack_rr =
+        dr_model_desc |>
+        filter(outcome == "hearing" & type == "residual" & min_epv == "20")
+    )
+  )
 ```
 
 # Model evaluation
@@ -4453,7 +4610,7 @@ cm_summary <-
   unite(summary, avg, ci, sep = " ") |>
   mutate(
     model = factor(model, unique(model))
-    , metric = factor(metric, c("AUC-ROC", "TNR", "TPR", "PPV", "NPV"))
+    , metric = factor(metric, c("AUC-ROC", "F1", "TNR", "TPR", "PPV", "NPV"))
   ) |>
   spread(metric, summary) |>
   left_join(
@@ -4472,8 +4629,9 @@ cm_summary |>
   footnote(
     paste0(
       "AUC-ROC, area under the curve - receiver operating characteristics; "
-      , "TH, the chosen threshold, ~95% specificity if possible; "
-      , "TNR, true negative rate (specificity), ~95% if possible; "
+      , "TH, the chosen threshold, balanced sensitivity and specificity; "
+      , "F1, the F1-score; "
+      , "TNR, true negative rate (specificity); "
       , "TPR, true positive rate (sensitivity/recall); "
       , "PPV, positive predictive value (precision); "
       , "NPV, negative predictive value. "
@@ -4773,6 +4931,81 @@ demo_trajectories_plot[[2]]
 
 Figure 18. Other outcome trajectories with ~20% truly and ~20% falsely predicted outcomes among ~50% truly predicted survive.
 
+```{r Required features, include=FALSE}
+pred_features <-
+  list(
+    survive = survive_pred_features
+    , rop_severe = rop_severe_pred_features
+    , bpd = bpd_pred_features
+    , bpd_moderate_severe = bpd_moderate_severe_pred_features
+    , eugr_hc = eugr_hc_pred_features
+    , eugr_bw = eugr_bw_pred_features
+    , hearing = hearing_pred_features
+  ) |>
+  lapply(gather, layer, used, -feature) |>
+  imap(~ mutate(.x, outcome = .y)) |>
+  reduce(rbind) |>
+  mutate(
+    layer =
+      paste0(layer, ifelse(!str_detect(layer, "[:digit:]$"), "1", ""))
+    , timing =
+      ifelse(str_detect(layer, "baseline"), "at_birth", "during_care")
+  ) |>
+  select(outcome, timing, feature, used) |>
+  mutate_at(c("outcome", "timing"), \(x) factor(x, unique(x))) |>
+  group_by(outcome, timing, feature) |>
+  summarize(used = as.integer(sum(used) > 0, 1, 0), .groups = "drop") |>
+  filter(used == 1) |>
+  group_by(outcome, feature) |>
+  mutate(used = n()) |>
+  ungroup() |>
+  left_join(
+    raw_data_new_colname |>
+      select(feature = new_colname, label = old_colname) |>
+      unique()
+    , by = join_by(feature)
+  ) |>
+  mutate(feature = ifelse(is.na(label), feature, label)) |>
+  select(-label) |>
+  group_by(outcome, timing) |>
+  summarize(
+    n1 = sum(used == 1)
+    , n2 = sum(used > 1)
+    , features = paste0(feature, collapse = ", ")
+    , .groups = "drop"
+  ) |>
+  mutate(
+    n =
+      paste0(
+        ifelse(n2 == 0 | timing == "at_birth", n1, paste0(n2, " + ", n1 + 1))
+        , " features:"
+      )
+    , features =
+      ifelse(timing == "at_birth", features, paste0(features, ", Age_D"))
+  ) |>
+  select(-n1, -n2) |>
+  unite(features, n, features, sep = " ") |>
+  spread(timing, features, fill = "") |>
+  left_join(
+    raw_data_new_colname |>
+      select(outcome = new_colname, label = old_colname) |>
+      unique()
+    , by = join_by(outcome)
+  ) |>
+  mutate(outcome = ifelse(is.na(label), outcome, label)) |>
+  select(-label) |>
+  mutate(outcome = str_replace_all(outcome, "^bpd", "BPD"))
+```
+
+```{r table-19, echo=FALSE}
+pred_features |>
+  kable(
+    caption = "Table 19. Required features."
+    , format = kable_format
+  ) |>
+  kable_classic() |>
+  column_spec(1:3, extra_css = "vertical-align:top;")
+```
 
 
 
