@@ -20,6 +20,7 @@ thresholding <-
         compute_metrics(
           eval_df[sample(seq(nrow(eval_df)), nrow(eval_df), TRUE), ]
           , p = FALSE
+          , f1 = TRUE
           , interp = FALSE
         )$metrics
     }
@@ -84,19 +85,19 @@ thresholding <-
       mutate(
         avg =
           ifelse(
-            metric %in% c("th", "nb")
+            metric %in% c("th", "nb", "f1")
             , round(avg, 2)
             , round(avg * 100, 2)
           )
         , lb =
           ifelse(
-            metric %in% c("th", "nb")
+            metric %in% c("th", "nb", "f1")
             , round(lb, 2)
             , round(lb * 100, 2)
           )
         , ub =
           ifelse(
-            metric %in% c("th", "nb")
+            metric %in% c("th", "nb", "f1")
             , round(ub, 2)
             , round(ub * 100, 2)
           )

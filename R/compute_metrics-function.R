@@ -7,6 +7,7 @@ compute_metrics <-
     , ppv = TRUE
     , npv = TRUE
     , nb = TRUE
+    , f1 = FALSE
     , interp = FALSE
   ){
     
@@ -80,6 +81,18 @@ compute_metrics <-
       metrics <-
         metrics |>
         mutate(nb = (tp - fp * th / (1 - th)) / (tp + fn + fp + tn))
+    }
+    
+    if(f1){
+      metrics <-
+        metrics |>
+        mutate(
+          f1 =
+            2 * (
+              (tp / (tp + fn) * tp / (tp + fp))
+              / (tp / (tp + fn) + tp / (tp + fp))
+            )
+        )
     }
     
     metrics <-
