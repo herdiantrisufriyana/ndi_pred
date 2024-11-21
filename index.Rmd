@@ -4641,6 +4641,147 @@ cm_summary |>
   column_spec(1:7, extra_css = "vertical-align:top;")
 ```
 
+```{r Compute CM using train-set threshold for the selected time, include=FALSE}
+eval$cm_selected_time <-
+  modeval_data_set |>
+  lapply(\(x) filter(x$residual$`20`$test, !is.na(outcome))) |>
+  lapply(
+    \(x)
+    x |>
+      select_at(colnames(x)[colnames(x) != "ga_wk"]) |>
+      left_join(
+        modeval_data_set$survive$residual$`20`$test |>
+          select(id, t, ga_wk)
+        , by = join_by(id, t)
+      ) |>
+      select(id, ga_wk, t, everything())
+  ) |>
+  lapply(
+    \(x)
+    c(2*7, 4*7, 6*7) |>
+      `names<-`(paste0("t_", c(2*7, 4*7, 6*7))) |>
+      lapply(
+        \(y)
+        x |>
+          mutate(seq = seq(n())) |>
+          filter(t == y) |>
+          pull(seq)
+      ) |>
+      c(c(36*7) |>
+          `names<-`(paste0("ga_wk_t_", c(36))) |>
+          lapply(
+            \(y)
+            x |>
+              mutate(seq = seq(n()), ga_wk_t = ga_wk * 7 + t) |>
+              filter(ga_wk_t == y) |>
+              pull(seq)
+          )
+      )
+  ) |>
+  imap(
+    ~ .x |>
+      lapply(
+        \(x)
+        list(
+          eval_df =
+            eval_df_list[
+              !str_detect(names(eval_df_list), "baseline")
+              & str_detect(names(eval_df_list), paste0("^", .y, "_"))
+            ][[1]]$test[x, , drop = FALSE] |>
+            `rownames<-`(NULL) |>
+            select(-id)
+          , custom_ref =
+            th[
+              !str_detect(names(th), "baseline")
+              & str_detect(names(th), paste0("^", .y, "_"))
+            ][[1]]
+        )
+      )
+  ) |>
+  pblapply(
+    \(x)
+    x |>
+      lapply(
+        \(x)
+        thresholding(
+          eval_df = x$eval_df
+          , custom_metric = "th"
+          , custom_ref = x$custom_ref
+          , seed = seed
+        )
+      )
+  )
+```
+
+```{r Summarize CM using test set for the selected time, include=FALSE}
+cm_selected_time_summary <-
+  eval$cm_selected_time |>
+  imap(
+    ~ names(.x) |>
+      lapply(
+        \(x)
+        mutate(.x[[x]], outcome = .y, timing = x)
+      ) |>
+      reduce(rbind)
+  ) |>
+  reduce(rbind) |>
+  filter(ref_type == "TH" & !metric %in% c("th", "nb")) |>
+  mutate(metric = str_to_upper(metric)) |>
+  select(-ref_type, -ref_value) |>
+  select(outcome, metric, avg, everything()) |>
+  mutate_at(c("avg", "lb", "ub"), format, digits = 2) |>
+  unite(ci, lb, ub, sep = ", ") |>
+  mutate_at("ci", \(x) paste0("(", x, ")")) |>
+  unite(summary, avg, ci, sep = " ") |>
+  mutate(
+    outcome = factor(outcome, unique(outcome))
+    , timing = factor(timing, unique(timing))
+    , metric = factor(metric, c("AUC-ROC", "F1", "TNR", "TPR", "PPV", "NPV"))
+  ) |>
+  spread(metric, summary) |>
+  left_join(
+    reduce(imap(th, ~ data.frame(model = .y, TH = .x)), rbind) |>
+      filter(!str_detect(model, "baseline")) |>
+      mutate_at("model", str_remove_all, "_stack_[:alpha:]*") |>
+      rename(outcome = model)
+    , by = join_by(outcome)
+  ) |>
+  select(outcome, timing, TH, everything())
+```
+
+```{r table-19, echo=FALSE}
+cm_selected_time_summary |>
+  mutate(
+    F1 = ifelse(str_detect(F1, "NaN"), "N/A*", F1)
+    , TNR = ifelse(str_detect(TNR, "NaN"), "N/A†", TNR)
+    , TPR = ifelse(str_detect(TPR, "NaN"), "N/A‡", TPR)
+    , PPV = ifelse(str_detect(PPV, "NaN"), "N/A§", PPV)
+    , NPV = ifelse(str_detect(NPV, "NaN"), "N/A¶", NPV)
+  ) |>
+  kable(
+    caption =
+      "Table 19. Predictive performance using test set at particular time."
+    , format = kable_format
+  ) |>
+  footnote(
+    paste0(
+      "*, No positives or no predicted positives; "
+      , "†, No negatives; "
+      , "‡, No positives; "
+      , "§, No predicted positives; "
+      , "¶, No predicted negatives; "
+      , "TH, the chosen threshold, balanced sensitivity and specificity; "
+      , "F1, the F1-score; "
+      , "TNR, true negative rate (specificity); "
+      , "TPR, true positive rate (sensitivity/recall); "
+      , "PPV, positive predictive value (precision); "
+      , "NPV, negative predictive value. "
+    )
+  ) |>
+  kable_classic() |>
+  column_spec(1:7, extra_css = "vertical-align:top;")
+```
+
 # Model deployment
 
 ```{r Compile any-outcome baseline & stack predictions per id-t, include=FALSE}
@@ -4997,10 +5138,10 @@ pred_features <-
   mutate(outcome = str_replace_all(outcome, "^bpd", "BPD"))
 ```
 
-```{r table-19, echo=FALSE}
+```{r table-20, echo=FALSE}
 pred_features |>
   kable(
-    caption = "Table 19. Required features."
+    caption = "Table 20. Required features."
     , format = kable_format
   ) |>
   kable_classic() |>
