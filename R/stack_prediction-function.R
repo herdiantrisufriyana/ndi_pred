@@ -5,7 +5,7 @@ stack_prediction <-
     , model_dir
     , prior_model_name
     , indices
-    , set = c("train", "validation", "test")
+    , set = c("train", "validation", "test", "independent_test")
   ){
     
     `names<-`(set, set) |>

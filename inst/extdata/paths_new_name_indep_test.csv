@@ -1,0 +1,10 @@
+name,path
+demographic_surfactant_growth,inst/extdata/validation_87/0_Demographic+surfactant+Growth_87.xlsx
+ventilation_breathing_o2_daily_42d,inst/extdata/validation_87/1_Ventilation 1_呼吸與氧氣_42d_daily_87.xlsx
+ventilation_breathing_o2_steroid_6w,inst/extdata/validation_87/1_Ventilation 2_呼吸與氧氣_steroid_6w_87.xlsx
+hemodynamics_42d,inst/extdata/validation_87/2_Hemodynamics_42d_87.xlsx
+infection_42d,inst/extdata/validation_87/3_Infection 1_42d_87.xlsx
+gi_tract_feeding_42d,inst/extdata/validation_87/4_Gl_tract1_feeding_42d_87.xlsx
+growth_hc_bw_6w,inst/extdata/validation_87/5_Growth2_HC_BW_6w_87.xlsx
+morbidities_42d,inst/extdata/validation_87/6_Morbidities1_42day_87.xlsx
+outcomes,inst/extdata/validation_87/7_Outcome_Morbidity_Outcomes_87.xlsx

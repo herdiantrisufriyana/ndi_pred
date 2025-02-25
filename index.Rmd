@@ -1,6 +1,6 @@
 ---
-title: "Neonatal Outcomes AI Prediction using Multimodal Trajectory Database"
-author: "Herdiantri Sufriyana, ..., ..., ..., Chao-Ching Huang, Emily Chia-Yu Su"
+title: "Neonatal outcomes AI prediction using multimodal trajectory database"
+author: "Herdiantri Sufriyana, Yung-Chieh Lin, Chien-Jung Ho, Ting-Chun Yeh, Chao-Ching Huang, Emily Chia-Yu Su"
 date: "2024-09-10"
 output: html_document
 ---
@@ -65,14 +65,37 @@ paths_new_name <-
   read_csv("inst/extdata/paths_new_name.csv", show_col_types = FALSE)
 ```
 
+```{r List raw indep-test data paths, include=FALSE}
+paths_old_name_indep_test <-
+  list.files(
+    "inst/extdata/validation_87"
+    , pattern = "\\.xlsx$"
+    , full.names = TRUE
+  )
+```
+
+```{r Write raw indep-test data path old names, eval=FALSE, include=FALSE}
+data.frame(name = NA, path = paths_old_name_indep_test)  |>
+  write_csv("inst/extdata/paths_old_name_indep_test.csv")
+```
+
+```{r Read raw indep-test data path new names, include=FALSE}
+paths_new_name_indep_test <-
+  read_csv("inst/extdata/paths_new_name_indep_test.csv", show_col_types = FALSE)
+```
+
 ```{r table-1, echo=FALSE}
 paths_new_name |>
+  mutate(dataset = "Modeling") |>
+  rbind(mutate(paths_new_name, dataset = "Independent test")) |>
+  select(dataset, everything()) |>
+  mutate(dataset = ifelse(duplicated(dataset), "", dataset)) |>
   kable(
     caption = "Table 1. Raw data names and paths."
     , format = kable_format
   ) |>
   kable_classic() |>
-  column_spec(1:2, extra_css = "vertical-align:top;")
+  column_spec(1:3, extra_css = "vertical-align:top;")
 ```
 
 ```{r Read raw data, include=FALSE}
@@ -80,6 +103,17 @@ raw_data <-
   paths_new_name$path |>
   `names<-`(paths_new_name$name) |>
   lapply(read_xlsx, sheet = 1)
+```
+
+```{r Read raw indep-test data, include=FALSE}
+raw_data_indep_test <-
+  paths_new_name_indep_test$path |>
+  `names<-`(paths_new_name_indep_test$name) |>
+  lapply(read_xlsx, sheet = 1)
+
+raw_data_indep_test$demographic_surfactant_growth <-
+  raw_data_indep_test$demographic_surfactant_growth |>
+  rename(BBWZ = BBW_Z, BHCZ = BHC_Z)
 ```
 
 # Data preprocessing
@@ -99,6 +133,18 @@ raw_data_old_colname <-
   reduce(rbind)
 ```
 
+```{r List raw indep-test data colnames, include=FALSE}
+raw_data_old_colname_indep_test <-
+  raw_data_indep_test |>
+  imap(
+    ~ data.frame(
+        table = .y
+        , old_colname = colnames(.x)
+      )
+  ) |>
+  reduce(rbind)
+```
+
 ```{r Write raw data old colnames, eval=FALSE, include=FALSE}
 raw_data_old_colname |>
   write_csv("inst/extdata/raw_data_old_colname.csv")
@@ -109,15 +155,27 @@ raw_data_new_colname <-
   read_csv("inst/extdata/raw_data_new_colname.csv", show_col_types = FALSE)
 ```
 
+```{r Read raw indep-test data new colnames, include=FALSE}
+raw_data_new_colname_indep_test <-
+  raw_data_old_colname_indep_test |>
+  left_join(raw_data_new_colname, by = join_by(table, old_colname))
+```
+
 ```{r table-2, echo=FALSE}
 raw_data_new_colname |>
-  mutate(table = ifelse(duplicated(table), "", table)) |>
+  mutate(dataset = "Modeling") |>
+  rbind(
+    mutate(raw_data_new_colname_indep_test, dataset = "Independent test")
+  ) |>
+  select(dataset, everything()) |>
+  mutate(table = ifelse(duplicated(paste0(dataset, table)), "", table)) |>
+  mutate(dataset = ifelse(duplicated(dataset), "", dataset)) |>
   kable(
     caption = "Table 2. Raw data old and new column names."
     , format = kable_format
   ) |>
   kable_classic() |>
-  column_spec(1:2, extra_css = "vertical-align:top;")
+  column_spec(1:4, extra_css = "vertical-align:top;")
 ```
 
 ```{r Modify column names, include=FALSE}
@@ -128,6 +186,25 @@ raw_data1 <-
       `colnames<-`(
         data.frame(table = .y, old_colname = colnames(.x)) |>
           left_join(raw_data_new_colname, by = join_by(table, old_colname)) |>
+          mutate(
+            new_colname =
+              ifelse(is.na(new_colname), old_colname, new_colname)
+          ) |>
+          pull(new_colname)
+      )
+  )
+```
+
+```{r Modify column names for indep-test, include=FALSE}
+raw_data1_indep_test <-
+  raw_data_indep_test |>
+  imap(
+    ~ .x |>
+      `colnames<-`(
+        data.frame(table = .y, old_colname = colnames(.x)) |>
+          left_join(
+            raw_data_new_colname_indep_test, by = join_by(table, old_colname)
+          ) |>
           mutate(
             new_colname =
               ifelse(is.na(new_colname), old_colname, new_colname)
@@ -148,6 +225,29 @@ raw_data2 <-
   ) |>
   right_join(
     raw_data1[str_detect(names(raw_data1), "42d$")] |>
+      reduce(\(x, y) left_join(x, y, by = join_by(id, t_day))) |>
+      mutate(t_wk = ceiling(t_day / 7))
+    , by = join_by(id, t_wk)
+  ) |>
+  select(-t_wk) |>
+  select(id, t = t_day, everything())
+```
+
+```{r Join raw indep-test data tables accordingly, include=FALSE}
+raw_data2_indep_test <-
+  raw_data1_indep_test[
+    !str_detect(names(raw_data1_indep_test), "42d$|6w$")
+  ] |>
+  reduce(\(x, y) left_join(x, y, by = join_by(id))) |>
+  right_join(
+    raw_data1_indep_test[
+        str_detect(names(raw_data1_indep_test), "6w$")
+      ] |>
+      reduce(\(x, y) left_join(x, y, by = join_by(id, t_wk)))
+    , by = join_by(id, ga_wk)
+  ) |>
+  right_join(
+    raw_data1_indep_test[str_detect(names(raw_data1_indep_test), "42d$")] |>
       reduce(\(x, y) left_join(x, y, by = join_by(id, t_day))) |>
       mutate(t_wk = ceiling(t_day / 7))
     , by = join_by(id, t_wk)
@@ -210,6 +310,31 @@ raw_data3 <-
   )
 ```
 
+```{r Modify variable-types for indep-test, include=FALSE}
+raw_data3_indep_test <-
+  raw_data2_indep_test |>
+  imap(
+    ~ data.frame(
+        value =
+          ifelse(
+            filter(variable_new_type, variable == .y)$new_type != "numeric"
+            ,as.character
+            ,as.numeric
+          )(.x)
+      ) |>
+      `colnames<-`(.y)
+  ) |>
+  reduce(cbind)
+
+raw_data3_indep_test <-
+  unique(variable_new_type$new_type) |>
+  `names<-`(unique(variable_new_type$new_type)) |>
+  imap(
+    ~ raw_data3_indep_test |>
+      select_at(filter(variable_new_type, new_type == .x)$variable)
+  )
+```
+
 ```{r List raw data categories, include=FALSE}
 raw_data_old_cat <-
   raw_data3$factor |>
@@ -262,13 +387,41 @@ raw_data4 <-
   select_at(colnames(raw_data2))
 ```
 
+```{r Modify categories for indep-test, include=FALSE}
+raw_data4_indep_test <- raw_data3_indep_test
+
+raw_data4_indep_test$factor <-
+  raw_data4_indep_test$factor |>
+  mutate(seq = seq(n())) |>
+  gather(colname, old_cat, -seq) |>
+  mutate_at("colname", \(x) factor(x, unique(x))) |>
+  left_join(raw_data_new_cat, by = join_by(colname, old_cat)) |>
+  select(-old_cat) |>
+  spread(colname, new_cat) |>
+  arrange(seq) |>
+  select(-seq) |>
+  mutate_all(as.factor)
+
+raw_data4_indep_test <-
+  raw_data4_indep_test |>
+  reduce(cbind) |>
+  select_at(colnames(raw_data2_indep_test))
+```
+
 ```{r table-5, echo=FALSE}
 raw_data4 |>
-  select(id, survive, death_age) |>
+  mutate(dataset = "Modeling") |>
+  rbind(mutate(raw_data4_indep_test, dataset = "Independent test")) |>
+  mutate(dataset = factor(dataset, unique(dataset))) |>
+  select(dataset, id, survive, death_age) |>
   unique() |>
   mutate(ms_death_age = is.na(death_age)) |>
-  group_by(survive, ms_death_age) |>
+  group_by(dataset, survive, ms_death_age) |>
   summarize(n = n(), .groups = "drop") |>
+  mutate(
+    dataset = as.character(dataset)
+    , dataset = ifelse(duplicated(dataset), "", dataset)
+  ) |>
   kable(
     caption = "Table 5. Consistency check - survival and age of death."
     , format = kable_format
@@ -278,17 +431,38 @@ raw_data4 |>
 ```
 
 ```{r table-6, echo=FALSE}
-raw_data4 |>
+table6 <-
+  raw_data4 |>
   select_at(colnames(raw_data1$outcomes)) |>
+  mutate(dataset = "Modeling") |>
+  rbind(
+    raw_data4_indep_test |>
+      select_at(colnames(raw_data1_indep_test$outcomes)) |>
+      mutate(dataset = "Independent test")
+  ) |>
   unique() |>
-  select(-id, -survive) |>
-  mutate_all(\(x) ifelse(is.na(x), "missing", "non-missing")) |>
-  rename_all(\(x) paste0("ms_", x)) |>
-  gather(variable, value, -ms_death_age) |>
-  group_by(ms_death_age, variable, value) |>
+  select(-id, -survive)
+
+table6 |>
+  mutate_if(
+    colnames(table6) != "dataset"
+    , \(x) ifelse(is.na(x), "missing", "non-missing")
+  ) |>
+  rename_if(
+    colnames(table6) != "dataset"
+    , \(x) paste0("ms_", x)
+  ) |>
+  gather(variable, value, -dataset, -ms_death_age) |>
+  mutate(dataset = factor(dataset, unique(dataset))) |>
+  group_by(dataset, ms_death_age, variable, value) |>
   summarize(n = n(), .groups = "drop") |>
   spread(value, n, fill = 0) |>
-  mutate(ms_death_age = ifelse(duplicated(ms_death_age), "", ms_death_age)) |>
+  mutate(
+    ms_death_age =
+      ifelse(duplicated(paste0(dataset, ms_death_age)), "", ms_death_age)
+  ) |>
+  mutate(dataset = as.character(dataset)) |>
+  mutate(dataset = ifelse(duplicated(dataset), "", dataset)) |>
   kable(
     caption = "Table 6. Consistency check - other outcomes and age of death."
     , format = kable_format
@@ -390,14 +564,30 @@ raw_data5 <-
   filter(is.na(death_age) | t <= (round(death_age) + 1))
 ```
 
-```{r Remove raw_ variables, include=FALSE}
+```{r Filter data up to death age if not survive for indep-test, include=FALSE}
+raw_data5_indep_test <-
+  raw_data4_indep_test |>
+  filter(is.na(death_age) | t <= (round(death_age) + 1))
+```
+
+```{r Remove raw variables, include=FALSE}
 raw_data6 <-
   raw_data5 |>
   select_if(!str_detect(colnames(raw_data5), "bbw_g|raw"))
 ```
 
+```{r Remove raw variables for indep-test, include=FALSE}
+raw_data6_indep_test <-
+  raw_data5_indep_test |>
+  select_if(!str_detect(colnames(raw_data5_indep_test), "bbw_g|raw"))
+```
+
 ```{r Finalize cleaned data, include=FALSE}
 cleaned_data <- raw_data6
+```
+
+```{r Finalize cleaned data for indep-test, include=FALSE}
+cleaned_data_indep_test <- raw_data6_indep_test
 ```
 
 ## Data partition
@@ -449,14 +639,24 @@ test_id <- reduce(test_id, c)
 
 ```{r figure-1, echo=FALSE, fig.height=5, fig.width=7}
 whole_set |>
-    mutate(
+  mutate(
     set =
       case_when(
-        id %in% train_id ~ "training"
-        ,id %in% val_id ~ "validation"
-        ,id %in% test_id ~ "test"
-      ) |>
-      factor(c("training", "validation", "test"))
+        id %in% train_id ~ "Training"
+        ,id %in% val_id ~ "Validation"
+        ,id %in% test_id ~ "Test"
+      )
+  ) |>
+  rbind(
+    cleaned_data_indep_test |>
+      select(id, ga_wk) |>
+      unique() |>
+      mutate(set = "Independent test")
+  ) |>
+  mutate(
+    set =
+      set |>
+      factor(c("Training", "Validation", "Test", "Independent test"))
   ) |>
   ggplot(aes(ga_wk)) +
   geom_histogram(binwidth = 1, color = "white") +
@@ -465,7 +665,7 @@ whole_set |>
   theme(strip.text.y = element_text(angle = 0))
 ```
 
-Figure 1. GA (week) distribution for each partition. GA, gestational week.
+Figure 1. GA (week) distribution for each partition and independent test. GA, gestational week.
 
 ```{r Finalize inference data, include=FALSE}
 infer_data <-
@@ -1501,8 +1701,34 @@ saveRDS(imputed_data, "data/imputed_data.rds")
 imputed_data <- readRDS("data/imputed_data.rds")
 ```
 
+```{r Obtain imputed data for indep-test, eval=FALSE, include=FALSE}
+imputed_data_indep_test <-
+  mice.mids(imp_results, newdata = cleaned_data_indep_test) |>
+  complete(1)
+
+imputed_data_indep_test <-
+  imputed_data_indep_test |>
+  imap(
+    ~ list(
+        select_at(cleaned_data_indep_test, .y)
+        , select_at(imputed_data_indep_test, .y)
+      )[[ifelse(.y %in% colnames(raw_data1_indep_test$outcomes), 1, 2)]]
+  ) |>
+  reduce(cbind)
+
+saveRDS(imputed_data_indep_test, "data/imputed_data_indep_test.rds")
+```
+
+```{r Load pre-obtained imputed data for indep-test, include=FALSE}
+imputed_data_indep_test <- readRDS("data/imputed_data_indep_test.rds")
+```
+
 ```{r Finalize readily-analyzed data, include=FALSE}
 processed_data <- imputed_data
+```
+
+```{r Finalize readily-analyzed data for indep-test, include=FALSE}
+processed_data_indep_test <- imputed_data_indep_test
 ```
 
 # Descriptive statistics
@@ -1833,78 +2059,52 @@ processed_data2 <-
   select_at(colnames(processed_data))
 ```
 
+```{r Modify categories in processed data for indep-test, include=FALSE}
+processed_data2_indep_test <-
+  unique(variable_new_type$new_type) |>
+  `names<-`(unique(variable_new_type$new_type)) |>
+  imap(
+    ~ processed_data_indep_test |>
+      select_at(
+        filter(variable_new_type, new_type == .x)$variable |>
+          intersect(colnames(cleaned_data_indep_test))
+      )
+  )
+
+processed_data2_indep_test$factor <-
+  processed_data2_indep_test$factor |>
+  mutate_all(as.character) |>
+  mutate(seq = seq(n())) |>
+  gather(colname, old_cat, -seq) |>
+  left_join(processed_data_new_cat, by = join_by(colname, old_cat)) |>
+  select(-old_cat) |>
+  mutate_at("colname", \(x) factor(x, unique(x))) |>
+  spread(colname, new_cat) |>
+  arrange(seq) |>
+  select(-seq) |>
+  mutate_all(as.factor)
+
+processed_data2_indep_test <-
+  processed_data2_indep_test |>
+  reduce(cbind) |>
+  select_at(colnames(processed_data_indep_test))
+```
+
 ```{r Split nominal categories in processed data, include=FALSE}
-processed_data3 <- list()
+processed_data3 <- split_nominal_categories(processed_data2)
+```
 
-for(i in seq(ncol(processed_data2))){
-  processed_data3[[i]] <-
-    processed_data2 |>
-    select(all_of(i))
-  
-  if(is.factor(processed_data2[[i]])){
-    if(!all(str_detect(levels(processed_data2[[i]]), "[:digit:]-"))){
-      processed_data3[[i]] <-
-        processed_data3[[i]] |>
-        mutate(seq = seq(n())) |>
-        gather(old_colname, new_colname, -seq) |>
-        select(-old_colname) |>
-        mutate(
-          new_colname =
-            new_colname |>
-            factor(
-              processed_data_new_cat |>
-                filter(colname == colnames(processed_data2)[i]) |>
-                pull(new_cat) |>
-                unique() |>
-                setdiff(NA)
-            )
-        ) |>
-        mutate(cat = "1-yes") |>
-        spread(new_colname, cat, fill = "0-no") |>
-        arrange(seq) |>
-        select(-seq) |>
-        mutate_all(as.factor)
-      
-      if("(removed)" %in% colnames(processed_data3[[i]])){
-        processed_data3[[i]] <-
-          processed_data3[[i]] |>
-          select_if(colnames(processed_data3[[i]]) != "(removed)")
-      }
-      
-      if("(missing)" %in% colnames(processed_data3[[i]])){
-        processed_data3[[i]] <-
-          processed_data3[[i]] |>
-          mutate_all(as.character) |>
-          mutate(seq = seq(n())) |>
-          gather(colname, cat, -seq, -`(missing)`) |>
-          mutate(cat = ifelse(`(missing)` == "1-yes", NA, cat)) |>
-          mutate_at("colname", \(x) factor(x, unique(x))) |>
-          spread(colname, cat) |>
-          arrange(seq) |>
-          select(-seq, -`(missing)`) |>
-          mutate_all(as.factor)
-      }
-      
-      if(any(str_detect(colnames(processed_data3[[i]]), "\\*$"))){
-        processed_data3[[i]] <-
-          processed_data3[[i]] |>
-          mutate_if(
-            str_detect(colnames(processed_data3[[i]]), "\\*$")
-            , \(x) as.factor(ifelse(x == "1-yes", "0-no", "1-yes"))
-          ) |>
-          `colnames<-`(str_remove_all(colnames(processed_data3[[i]]), "\\*$"))
-      }
-    }
-  }
-}
-
-processed_data3 <-
-  processed_data3 |>
-  reduce(cbind)
+```{r Split nominal categories in processed data for indep-test, include=FALSE}
+processed_data3_indep_test <-
+  split_nominal_categories(processed_data2_indep_test)
 ```
 
 ```{r Finalize data for modeling and evaluation, include=FALSE}
 modeval_data <- processed_data3
+```
+
+```{r Finalize data for modeling and evaluation for indep-test, include=FALSE}
+modeval_data_indep_test <- processed_data3_indep_test
 ```
 
 ```{r Finalize regression-ready data, include=FALSE}
@@ -2665,6 +2865,29 @@ modeval_data_set_ori <-
   )
 ```
 
+```{r Split data for baseline & residual for indep-test, include=FALSE}
+modeval_data_set_ori_indep_test <-
+  predictor |>
+  lapply(\(x) x[sapply(x, length) > 0]) |>
+  imap(
+    ~ list(
+        baseline =
+          modeval_data_indep_test |>
+          mutate_if(is.factor, \(x) ifelse(is.na(x), NA, as.numeric(x) - 1)) |>
+          select_at(c(var$s, .y, .x$baseline)) |>
+          rename_at(.y, \(x) "outcome") |>
+          unique()
+        , residual =
+          modeval_data_indep_test |>
+          mutate_if(is.factor, \(x) ifelse(is.na(x), NA, as.numeric(x) - 1)) |>
+          select_at(c(var$s, .y, var$t, .x$residual)) |>
+          rename_at(.y, \(x) "outcome") |>
+          unique()
+      ) |>
+      imap(~ list(independent_test = .x))
+  )
+```
+
 # Dimensional reduction
 
 ```{r Dim reduction needed for regression training, include=FALSE}
@@ -2757,6 +2980,31 @@ dr_input <-
             unique(filter(dr_input, outcome == x & type == y)$min_epv)
           ) |>
           lapply(\(z) modeval_data_set_ori[[x]][[y]])
+      )
+  )
+```
+
+```{r Prepare dimensional reduction inputs for indep-test, include=FALSE}
+dr_input_indep_test <-
+  dim_red_train_regression |>
+  filter(pred > max_pred & max_pred > 1)
+
+dr_input_indep_test <-
+  unique(dr_input_indep_test$outcome) |>
+  `names<-`(unique(dr_input_indep_test$outcome)) |>
+  lapply(
+    \(x)
+    unique(filter(dr_input_indep_test, outcome == x)$type) |>
+      `names<-`(unique(filter(dr_input_indep_test, outcome == x)$type)) |>
+      lapply(
+        \(y)
+        unique(filter(dr_input_indep_test, outcome == x & type == y)$min_epv) |>
+          `names<-`(
+            unique(
+              filter(dr_input_indep_test, outcome == x & type == y)$min_epv
+            )
+          ) |>
+          lapply(\(z) modeval_data_set_ori_indep_test[[x]][[y]])
       )
   )
 ```
@@ -2963,6 +3211,28 @@ dr_output <-
   )
 ```
 
+```{r Reduce dimensions using the models for indep-test, include=FALSE}
+dr_output_indep_test <-
+  dr_input_indep_test |>
+  imap(
+    ~ names(.x) |>
+      `names<-`(names(.x)) |>
+      lapply(
+        \(x)
+        names(.x[[x]]) |>
+          `names<-`(names(.x[[x]])) |>
+          lapply(
+            \(y)
+            names(.x[[x]][[y]]) |>
+              `names<-`(names(.x[[x]][[y]])) |>
+              lapply(
+                \(z) reduce_dim_pca(dr_input_indep_test, dr_model, .y, x, y, z)
+              )
+          )
+      )
+  )
+```
+
 ```{r Change data for mod & eval to dr outputs accordingly, include=FALSE}
 modeval_data_set <-
   modeval_data_set_ori |>
@@ -2977,6 +3247,34 @@ modeval_data_set <-
             list(
               .x[[x]]
               , dr_output[[.y]][[x]][[as.character(y)]]
+            )[[
+              ifelse(
+                nrow(
+                  dr_model_desc |>
+                    filter(outcome == .y & type == x & min_epv == y)
+                ) > 0
+                , 2, 1
+              )
+            ]]
+          )
+      )
+  )
+```
+
+```{r Change data for indep-test to dr outputs accordingly, include=FALSE}
+modeval_data_set_indep_test <-
+  modeval_data_set_ori_indep_test |>
+  imap(
+    ~ names(.x) |>
+      `names<-`(names(.x)) |>
+      lapply(
+        \(x)
+        list(`20` = 20, `150` = 150, `200` = 200) |>
+          lapply(
+            \(y)
+            list(
+              .x[[x]]
+              , dr_output_indep_test[[.y]][[x]][[as.character(y)]]
             )[[
               ifelse(
                 nrow(
@@ -3050,9 +3348,13 @@ model_stacks |>
   column_spec(1:4, extra_css = "vertical-align:top;")
 ```
 
+```{r Empty list of dimensional reduction before modeling, include=FALSE}
+dr_before_modeling_desc <- list()
+```
+
 ## Survival prediction
 
-```{r Survival prediction - Write baseline 1, include=FALSE}
+```{r Survival prediction - Write baseline 1, eval=FALSE, include=FALSE}
 seq(nrow(filter(model_stacks, outcome == "survive" & type == "baseline"))) |>
   lapply(
     \(x)
@@ -3068,6 +3370,14 @@ seq(nrow(filter(model_stacks, outcome == "survive" & type == "baseline"))) |>
       ]][[
         as.character(x$min_epv[1])
       ]] |>
+      c(modeval_data_set_indep_test[[
+          x$outcome[1]
+        ]][[
+          x$type[1]
+        ]][[
+          as.character(x$min_epv[1])
+        ]]
+      ) |>
       imap(
         ~ .x |>
           filter(!is.na(outcome)) |>
@@ -3090,7 +3400,7 @@ survive_baseline1_rr <-
   )
 ```
 
-```{r Survival prediction - Write stack, include=FALSE}
+```{r Survival prediction - Write stack, eval=FALSE, include=FALSE}
 seq(nrow(filter(model_stacks, outcome == "survive" & type == "residual"))) |>
   lapply(
     \(x)
@@ -3111,6 +3421,22 @@ seq(nrow(filter(model_stacks, outcome == "survive" & type == "residual"))) |>
         , model_dir = "inst/extdata/model/"
         , prior_model_name = "survive_baseline1_rr"
         , indices = c("id")
+        , set = c("train", "validation", "test")
+      ) |>
+      c(stack_prediction(
+          modeval_data_set_indep_test[[
+              x$outcome[1]
+            ]][[
+              x$type[1]
+            ]][[
+              as.character(x$min_epv[1])
+            ]]
+          , data_dir = "inst/extdata/modeval_data_set/"
+          , model_dir = "inst/extdata/model/"
+          , prior_model_name = "survive_baseline1_rr"
+          , indices = c("id")
+          , set = c("independent_test")
+        )
       ) |>
       imap(
         ~ .x |>
@@ -3181,23 +3507,30 @@ survive_stack_eval_discrimination |>
 ```
 
 ```{r Survival prediction - Required features, include=FALSE}
+dr_before_modeling_desc$survive_baseline1_rr <-
+  list(outcome = "survive", type = "baseline", min_epv = "20")
+
+dr_before_modeling_desc$survive_stack_dnn <-
+  list(outcome = "survive", type = "residual", min_epv = "200")
+
 survive_pred_features <-
-  c(baseline = "survive_baseline1_rr", stack = "survive_stack_gbm") |>
+  c(baseline = "survive_baseline1_rr", stack = "survive_stack_dnn")
+
+survive_pred_features <-
+  survive_pred_features |>
   obtain_pred_features(
-    list(
-      survive_baseline1_rr =
+    dr_before_modeling_desc[survive_pred_features] |>
+      lapply(
+        \(x)
         dr_model_desc |>
-        filter(outcome == "survive" & type == "baseline" & min_epv == "20")
-      , survive_stack_gbm =
-        dr_model_desc |>
-        filter(outcome == "survive" & type == "residual" & min_epv == "150")
-    )
+        filter(outcome == x$outcome & type == x$type & min_epv == x$min_epv)
+      )
   )
 ```
 
 ## Severe ROP prediction
 
-```{r Severe ROP prediction - Write stack, include=FALSE}
+```{r Severe ROP prediction - Write stack, eval=FALSE, include=FALSE}
 seq(nrow(filter(model_stacks, outcome == "rop_severe" & type == "residual"))) |>
   lapply(
     \(x)
@@ -3216,8 +3549,24 @@ seq(nrow(filter(model_stacks, outcome == "rop_severe" & type == "residual"))) |>
           ]]
         , data_dir = "inst/extdata/modeval_data_set/"
         , model_dir = "inst/extdata/model/"
-        , prior_model_name = "survive_stack_gbm"
+        , prior_model_name = "survive_stack_dnn"
         , indices =  c("id", "t")
+        , set = c("train", "validation", "test")
+      ) |>
+      c(stack_prediction(
+          modeval_data_set_indep_test[[
+              x$outcome[1]
+            ]][[
+              x$type[1]
+            ]][[
+              as.character(x$min_epv[1])
+            ]]
+          , data_dir = "inst/extdata/modeval_data_set/"
+          , model_dir = "inst/extdata/model/"
+          , prior_model_name = "survive_stack_dnn"
+          , indices =  c("id", "t")
+          , set = c("independent_test")
+        )
       ) |>
       imap(
         ~ .x |>
@@ -3288,29 +3637,30 @@ rop_severe_stack_eval_discrimination |>
 ```
 
 ```{r Severe ROP prediction - Required features, include=FALSE}
+dr_before_modeling_desc$rop_severe_stack_rr <-
+  list(outcome = "rop_severe", type = "residual", min_epv = "20")
+
 rop_severe_pred_features <-
   c(baseline = "survive_baseline1_rr"
-    , stack1 = "survive_stack_gbm"
+    , stack1 = "survive_stack_dnn"
     , stack2 = "rop_severe_stack_rr"
-  ) |>
+  )
+
+rop_severe_pred_features <-
+  rop_severe_pred_features |>
   obtain_pred_features(
-    list(
-      survive_baseline1_rr =
+    dr_before_modeling_desc[rop_severe_pred_features] |>
+      lapply(
+        \(x)
         dr_model_desc |>
-        filter(outcome == "survive" & type == "baseline" & min_epv == "20")
-      , survive_stack_gbm =
-        dr_model_desc |>
-        filter(outcome == "survive" & type == "residual" & min_epv == "150")
-      , rop_severe_stack_rr =
-        dr_model_desc |>
-        filter(outcome == "rop_severe" & type == "residual" & min_epv == "20")
-    )
+        filter(outcome == x$outcome & type == x$type & min_epv == x$min_epv)
+      )
   )
 ```
 
 ## BPD prediction
 
-```{r BPD prediction - Write stack, include=FALSE}
+```{r BPD prediction - Write stack, eval=FALSE, include=FALSE}
 seq(nrow(filter(model_stacks, outcome == "bpd" & type == "residual"))) |>
   lapply(
     \(x)
@@ -3329,8 +3679,24 @@ seq(nrow(filter(model_stacks, outcome == "bpd" & type == "residual"))) |>
           ]]
         , data_dir = "inst/extdata/modeval_data_set/"
         , model_dir = "inst/extdata/model/"
-        , prior_model_name = "survive_stack_gbm"
+        , prior_model_name = "survive_stack_dnn"
         , indices =  c("id", "t")
+        , set = c("train", "validation", "test")
+      ) |>
+      c(stack_prediction(
+          modeval_data_set_indep_test[[
+              x$outcome[1]
+            ]][[
+              x$type[1]
+            ]][[
+              as.character(x$min_epv[1])
+            ]]
+          , data_dir = "inst/extdata/modeval_data_set/"
+          , model_dir = "inst/extdata/model/"
+          , prior_model_name = "survive_stack_dnn"
+          , indices =  c("id", "t")
+          , set = c("independent_test")
+        )
       ) |>
       imap(
         ~ .x |>
@@ -3401,33 +3767,42 @@ bpd_stack_eval_discrimination |>
 ```
 
 ```{r BPD prediction - Required features, include=FALSE}
+dr_before_modeling_desc$bpd_stack_rf <-
+  list(outcome = "bpd", type = "residual", min_epv = "150")
+
 bpd_pred_features <-
   c(baseline = "survive_baseline1_rr"
-    , stack1 = "survive_stack_gbm"
+    , stack1 = "survive_stack_dnn"
     , stack2 = "bpd_stack_rf"
-  ) |>
+  )
+
+bpd_pred_features <-
+  bpd_pred_features |>
   obtain_pred_features(
-    list(
-      survive_baseline1_rr =
+    dr_before_modeling_desc[bpd_pred_features] |>
+      lapply(
+        \(x)
         dr_model_desc |>
-        filter(outcome == "survive" & type == "baseline" & min_epv == "20")
-      , survive_stack_gbm =
-        dr_model_desc |>
-        filter(outcome == "survive" & type == "residual" & min_epv == "150")
-      , bpd_stack_rf =
-        dr_model_desc |>
-        filter(outcome == "bpd" & type == "residual" & min_epv == "150")
-    )
+        filter(outcome == x$outcome & type == x$type & min_epv == x$min_epv)
+      )
   )
 ```
 
 ## Moderate/severe BPD prediction
 
-```{r Mod/sev BPD prediction - Write stack, include=FALSE}
-seq(nrow(filter(model_stacks, outcome == "bpd_moderate_severe" & type == "residual"))) |>
+```{r Mod/sev BPD prediction - Write stack, eval=FALSE, include=FALSE}
+seq(
+    nrow(
+      filter(
+        model_stacks, outcome == "bpd_moderate_severe" & type == "residual"
+      )
+    )
+  ) |>
   lapply(
     \(x)
-    filter(model_stacks, outcome == "bpd_moderate_severe" & type == "residual") |>
+    filter(
+        model_stacks, outcome == "bpd_moderate_severe" & type == "residual"
+      ) |>
       slice(x)
   ) |>
   lapply(
@@ -3444,6 +3819,22 @@ seq(nrow(filter(model_stacks, outcome == "bpd_moderate_severe" & type == "residu
         , model_dir = "inst/extdata/model/"
         , prior_model_name = "bpd_stack_rf"
         , indices =  c("id", "t")
+        , set = c("train", "validation", "test")
+      ) |>
+      c(stack_prediction(
+          modeval_data_set_indep_test[[
+              x$outcome[1]
+            ]][[
+              x$type[1]
+            ]][[
+              as.character(x$min_epv[1])
+            ]]
+          , data_dir = "inst/extdata/modeval_data_set/"
+          , model_dir = "inst/extdata/model/"
+          , prior_model_name = "bpd_stack_rf"
+          , indices =  c("id", "t")
+          , set = c("independent_test")
+        )
       ) |>
       imap(
         ~ .x |>
@@ -3514,37 +3905,31 @@ bpd_moderate_severe_stack_eval_discrimination |>
 ```
 
 ```{r Mod/sev BPD prediction - Required features, include=FALSE}
+dr_before_modeling_desc$bpd_moderate_severe_stack_rf <-
+  list(outcome = "bpd_moderate_severe", type = "residual", min_epv = "150")
+
 bpd_moderate_severe_pred_features <-
   c(baseline = "survive_baseline1_rr"
-    , stack1 = "survive_stack_gbm"
+    , stack1 = "survive_stack_dnn"
     , stack2 = "bpd_stack_rf"
-    , stack3 = "bpd_moderate_severe_stack_dnn"
-  ) |>
+    , stack3 = "bpd_moderate_severe_stack_rf"
+  )
+
+bpd_moderate_severe_pred_features <-
+  bpd_moderate_severe_pred_features |>
   obtain_pred_features(
-    list(
-      survive_baseline1_rr =
+    dr_before_modeling_desc[bpd_moderate_severe_pred_features] |>
+      lapply(
+        \(x)
         dr_model_desc |>
-        filter(outcome == "survive" & type == "baseline" & min_epv == "20")
-      , survive_stack_gbm =
-        dr_model_desc |>
-        filter(outcome == "survive" & type == "residual" & min_epv == "150")
-      , bpd_stack_rf =
-        dr_model_desc |>
-        filter(outcome == "bpd" & type == "residual" & min_epv == "150")
-      , bpd_moderate_severe_stack_dnn =
-        dr_model_desc |>
-        filter(
-          outcome == "bpd_moderate_severe"
-          & type == "residual"
-          & min_epv == "200"
-        )
-    )
+        filter(outcome == x$outcome & type == x$type & min_epv == x$min_epv)
+      )
   )
 ```
 
 ## EUGR-HC prediction
 
-```{r EUGR-HC prediction - Write baseline 2, include=FALSE}
+```{r EUGR-HC prediction - Write baseline 2, eval=FALSE, include=FALSE}
 seq(nrow(filter(model_stacks, outcome == "eugr_hc" & type == "baseline"))) |>
   lapply(
     \(x)
@@ -3565,6 +3950,22 @@ seq(nrow(filter(model_stacks, outcome == "eugr_hc" & type == "baseline"))) |>
         , model_dir = "inst/extdata/model/"
         , prior_model_name = "survive_baseline1_rr"
         , indices =  "id"
+        , set = c("train", "validation", "test")
+      ) |>
+      c(stack_prediction(
+          modeval_data_set_indep_test[[
+              x$outcome[1]
+            ]][[
+              x$type[1]
+            ]][[
+              as.character(x$min_epv[1])
+            ]]
+          , data_dir = "inst/extdata/modeval_data_set/"
+          , model_dir = "inst/extdata/model/"
+          , prior_model_name = "survive_baseline1_rr"
+          , indices =  "id"
+          , set = c("independent_test")
+        )
       ) |>
       imap(
         ~ .x |>
@@ -3588,7 +3989,7 @@ eugr_hc_baseline2_rr <-
   )
 ```
 
-```{r EUGR-HC prediction - Write stack 1, include=FALSE}
+```{r EUGR-HC prediction - Write stack 1, eval=FALSE, include=FALSE}
 seq(nrow(filter(model_stacks, outcome == "survive" & type == "residual"))) |>
   lapply(
     \(x)
@@ -3619,6 +4020,35 @@ seq(nrow(filter(model_stacks, outcome == "survive" & type == "residual"))) |>
         , model_dir = "inst/extdata/model/"
         , prior_model_name = "eugr_hc_baseline2_rr"
         , indices =  "id"
+        , set = c("train", "validation", "test")
+      ) |>
+      c(stack_prediction(
+        lapply(
+            modeval_data_set_indep_test$eugr_hc$baseline$`20`
+            , select, id, outcome
+          ) |>
+          imap(
+            ~ .x |>
+              right_join(
+                modeval_data_set_indep_test[[
+                    x$outcome[1]
+                  ]][[
+                    x$type[1]
+                  ]][[
+                    as.character(x$min_epv[1])
+                  ]][[
+                    .y
+                  ]] |>
+                  select(-outcome)
+                , by = join_by(id)
+              )
+          )
+          , data_dir = "inst/extdata/modeval_data_set/"
+          , model_dir = "inst/extdata/model/"
+          , prior_model_name = "eugr_hc_baseline2_rr"
+          , indices =  "id"
+          , set = c("independent_test")
+        )
       ) |>
       imap(
         ~ .x |>
@@ -3688,7 +4118,7 @@ eugr_hc_stack1_eval_discrimination |>
   cat()
 ```
 
-```{r EUGR-HC prediction - Write stack, include=FALSE}
+```{r EUGR-HC prediction - Write stack, eval=FALSE, include=FALSE}
 seq(nrow(filter(model_stacks, outcome == "eugr_hc" & type == "residual"))) |>
   lapply(
     \(x)
@@ -3709,6 +4139,22 @@ seq(nrow(filter(model_stacks, outcome == "eugr_hc" & type == "residual"))) |>
         , model_dir = "inst/extdata/model/"
         , prior_model_name = "eugr_hc_stack1_dnn"
         , indices =  c("id", "t")
+        , set = c("train", "validation", "test")
+      ) |>
+      c(stack_prediction(
+          modeval_data_set_indep_test[[
+              x$outcome[1]
+            ]][[
+              x$type[1]
+            ]][[
+              as.character(x$min_epv[1])
+            ]]
+          , data_dir = "inst/extdata/modeval_data_set/"
+          , model_dir = "inst/extdata/model/"
+          , prior_model_name = "eugr_hc_stack1_dnn"
+          , indices =  c("id", "t")
+          , set = c("independent_test")
+        )
       ) |>
       imap(
         ~ .x |>
@@ -3779,33 +4225,37 @@ eugr_hc_stack_eval_discrimination |>
 ```
 
 ```{r EUGR-HC prediction - Required features, include=FALSE}
+dr_before_modeling_desc$eugr_hc_baseline2_rr <-
+  list(outcome = "eugr_hc", type = "baseline", min_epv = "20")
+
+dr_before_modeling_desc$eugr_hc_stack1_dnn <-
+  list(outcome = "survive", type = "residual", min_epv = "200")
+
+dr_before_modeling_desc$eugr_hc_stack_rr <-
+  list(outcome = "eugr_hc", type = "residual", min_epv = "20")
+
 eugr_hc_pred_features <-
   c(baseline1 = "survive_baseline1_rr"
     ,baseline2 = "eugr_hc_baseline2_rr"
     , stack1 = "eugr_hc_stack1_dnn"
     , stack2 = "eugr_hc_stack_rr"
-  ) |>
+  )
+
+eugr_hc_pred_features <-
+  eugr_hc_pred_features |>
   obtain_pred_features(
-    list(
-      survive_baseline1_rr =
+    dr_before_modeling_desc[eugr_hc_pred_features] |>
+      lapply(
+        \(x)
         dr_model_desc |>
-        filter(outcome == "survive" & type == "baseline" & min_epv == "20")
-      , eugr_hc_baseline2_rr =
-        dr_model_desc |>
-        filter(outcome == "eugr_hc" & type == "baseline" & min_epv == "20")
-      , eugr_hc_stack1_dnn =
-        dr_model_desc |>
-        filter(outcome == "survive" & type == "residual" & min_epv == "200")
-      , eugr_hc_stack_rr =
-        dr_model_desc |>
-        filter(outcome == "eugr_hc" & type == "residual" & min_epv == "20")
-    )
+        filter(outcome == x$outcome & type == x$type & min_epv == x$min_epv)
+      )
   )
 ```
 
 ## EUGR-BW prediction
 
-```{r EUGR-BW prediction - Write baseline 2, include=FALSE}
+```{r EUGR-BW prediction - Write baseline 2, eval=FALSE, include=FALSE}
 seq(nrow(filter(model_stacks, outcome == "eugr_bw" & type == "baseline"))) |>
   lapply(
     \(x)
@@ -3826,6 +4276,22 @@ seq(nrow(filter(model_stacks, outcome == "eugr_bw" & type == "baseline"))) |>
         , model_dir = "inst/extdata/model/"
         , prior_model_name = "survive_baseline1_rr"
         , indices =  "id"
+        , set = c("train", "validation", "test")
+      ) |>
+      c(stack_prediction(
+          modeval_data_set_indep_test[[
+              x$outcome[1]
+            ]][[
+              x$type[1]
+            ]][[
+              as.character(x$min_epv[1])
+            ]]
+          , data_dir = "inst/extdata/modeval_data_set/"
+          , model_dir = "inst/extdata/model/"
+          , prior_model_name = "survive_baseline1_rr"
+          , indices =  "id"
+          , set = c("independent_test")
+        )
       ) |>
       imap(
         ~ .x |>
@@ -3849,7 +4315,7 @@ eugr_bw_baseline2_rr <-
   )
 ```
 
-```{r EUGR-BW prediction - Write stack 1, include=FALSE}
+```{r EUGR-BW prediction - Write stack 1, eval=FALSE, include=FALSE}
 seq(nrow(filter(model_stacks, outcome == "survive" & type == "residual"))) |>
   lapply(
     \(x)
@@ -3880,6 +4346,35 @@ seq(nrow(filter(model_stacks, outcome == "survive" & type == "residual"))) |>
         , model_dir = "inst/extdata/model/"
         , prior_model_name = "eugr_bw_baseline2_rr"
         , indices =  "id"
+        , set = c("train", "validation", "test")
+      ) |>
+      c(stack_prediction(
+        lapply(
+            modeval_data_set_indep_test$eugr_bw$baseline$`20`
+            , select, id, outcome
+          ) |>
+          imap(
+            ~ .x |>
+              right_join(
+                modeval_data_set_indep_test[[
+                    x$outcome[1]
+                  ]][[
+                    x$type[1]
+                  ]][[
+                    as.character(x$min_epv[1])
+                  ]][[
+                    .y
+                  ]] |>
+                  select(-outcome)
+                , by = join_by(id)
+              )
+          )
+          , data_dir = "inst/extdata/modeval_data_set/"
+          , model_dir = "inst/extdata/model/"
+          , prior_model_name = "eugr_bw_baseline2_rr"
+          , indices =  "id"
+          , set = c("independent_test")
+        )
       ) |>
       imap(
         ~ .x |>
@@ -3949,7 +4444,7 @@ eugr_bw_stack1_eval_discrimination |>
   cat()
 ```
 
-```{r EUGR-BW prediction - Write stack, include=FALSE}
+```{r EUGR-BW prediction - Write stack, eval=FALSE, include=FALSE}
 seq(nrow(filter(model_stacks, outcome == "eugr_bw" & type == "residual"))) |>
   lapply(
     \(x)
@@ -3968,8 +4463,24 @@ seq(nrow(filter(model_stacks, outcome == "eugr_bw" & type == "residual"))) |>
           ]]
         , data_dir = "inst/extdata/modeval_data_set/"
         , model_dir = "inst/extdata/model/"
-        , prior_model_name = "eugr_bw_stack1_rr"
+        , prior_model_name = "eugr_bw_stack1_dnn"
         , indices =  c("id", "t")
+        , set = c("train", "validation", "test")
+      ) |>
+      c(stack_prediction(
+          modeval_data_set_indep_test[[
+              x$outcome[1]
+            ]][[
+              x$type[1]
+            ]][[
+              as.character(x$min_epv[1])
+            ]]
+          , data_dir = "inst/extdata/modeval_data_set/"
+          , model_dir = "inst/extdata/model/"
+          , prior_model_name = "eugr_bw_stack1_dnn"
+          , indices =  c("id", "t")
+          , set = c("independent_test")
+        )
       ) |>
       imap(
         ~ .x |>
@@ -4040,33 +4551,37 @@ eugr_bw_stack_eval_discrimination |>
 ```
 
 ```{r EUGR-BW prediction - Required features, include=FALSE}
+dr_before_modeling_desc$eugr_bw_baseline2_rr <-
+  list(outcome = "eugr_bw", type = "baseline", min_epv = "20")
+
+dr_before_modeling_desc$eugr_bw_stack1_dnn <-
+  list(outcome = "survive", type = "residual", min_epv = "200")
+
+dr_before_modeling_desc$eugr_bw_stack_rr <-
+  list(outcome = "eugr_bw", type = "residual", min_epv = "20")
+
 eugr_bw_pred_features <-
   c(baseline1 = "survive_baseline1_rr"
     ,baseline2 = "eugr_bw_baseline2_rr"
-    , stack1 = "eugr_bw_stack1_rr"
+    , stack1 = "eugr_bw_stack1_dnn"
     , stack2 = "eugr_bw_stack_rr"
-  ) |>
+  )
+
+eugr_bw_pred_features <-
+  eugr_bw_pred_features |>
   obtain_pred_features(
-    list(
-      survive_baseline1_rr =
+    dr_before_modeling_desc[eugr_bw_pred_features] |>
+      lapply(
+        \(x)
         dr_model_desc |>
-        filter(outcome == "survive" & type == "baseline" & min_epv == "20")
-      , eugr_bw_baseline2_rr =
-        dr_model_desc |>
-        filter(outcome == "eugr_bw" & type == "baseline" & min_epv == "20")
-      , eugr_bw_stack1_rr =
-        dr_model_desc |>
-        filter(outcome == "survive" & type == "residual" & min_epv == "20")
-      , eugr_bw_stack_rr =
-        dr_model_desc |>
-        filter(outcome == "eugr_bw" & type == "residual" & min_epv == "20")
-    )
+        filter(outcome == x$outcome & type == x$type & min_epv == x$min_epv)
+      )
   )
 ```
 
 ## Failed hearing test prediction
 
-```{r Failed hearing prediction - Write stack, include=FALSE}
+```{r Failed hearing prediction - Write stack, eval=FALSE, include=FALSE}
 seq(nrow(filter(model_stacks, outcome == "hearing" & type == "residual"))) |>
   lapply(
     \(x)
@@ -4085,8 +4600,24 @@ seq(nrow(filter(model_stacks, outcome == "hearing" & type == "residual"))) |>
           ]]
         , data_dir = "inst/extdata/modeval_data_set/"
         , model_dir = "inst/extdata/model/"
-        , prior_model_name = "survive_stack_gbm"
+        , prior_model_name = "survive_stack_dnn"
         , indices =  c("id", "t")
+        , set = c("train", "validation", "test")
+      ) |>
+      c(stack_prediction(
+          modeval_data_set_indep_test[[
+              x$outcome[1]
+            ]][[
+              x$type[1]
+            ]][[
+              as.character(x$min_epv[1])
+            ]]
+          , data_dir = "inst/extdata/modeval_data_set/"
+          , model_dir = "inst/extdata/model/"
+          , prior_model_name = "survive_stack_dnn"
+          , indices =  c("id", "t")
+          , set = c("independent_test")
+        )
       ) |>
       imap(
         ~ .x |>
@@ -4157,23 +4688,24 @@ hearing_stack_eval_discrimination |>
 ```
 
 ```{r Failed hearing prediction - Required features, include=FALSE}
+dr_before_modeling_desc$hearing_stack_rr <-
+  list(outcome = "hearing", type = "residual", min_epv = "20")
+
 hearing_pred_features <-
   c(baseline = "survive_baseline1_rr"
-    , stack1 = "survive_stack_gbm"
+    , stack1 = "survive_stack_dnn"
     , stack2 = "hearing_stack_rr"
-  ) |>
+  )
+
+hearing_pred_features <-
+  hearing_pred_features |>
   obtain_pred_features(
-    list(
-      survive_baseline1_rr =
+    dr_before_modeling_desc[hearing_pred_features] |>
+      lapply(
+        \(x)
         dr_model_desc |>
-        filter(outcome == "survive" & type == "baseline" & min_epv == "20")
-      , survive_stack_gbm =
-        dr_model_desc |>
-        filter(outcome == "survive" & type == "residual" & min_epv == "150")
-      , hearing_stack_rr =
-        dr_model_desc |>
-        filter(outcome == "hearing" & type == "residual" & min_epv == "20")
-    )
+        filter(outcome == x$outcome & type == x$type & min_epv == x$min_epv)
+      )
   )
 ```
 
@@ -4188,10 +4720,10 @@ th <- list()
 ```{r Create a list of best model names for evaluation, include=FALSE}
 eval_list <-
   c("survive_baseline1_rr"
-    , "survive_stack_gbm"
+    , "survive_stack_dnn"
     , "rop_severe_stack_rr"
     , "bpd_stack_rf"
-    , "bpd_moderate_severe_stack_dnn"
+    , "bpd_moderate_severe_stack_rf"
     , "eugr_hc_baseline2_rr"
     , "eugr_hc_stack_rr"
     , "eugr_bw_baseline2_rr"
@@ -4204,10 +4736,10 @@ eval_list <-
 eval_df_list <-
   list(
     survive_baseline1_rr
-    , survive_stack_gbm
+    , survive_stack_dnn
     , rop_severe_stack_rr
     , bpd_stack_rf
-    , bpd_moderate_severe_stack_dnn
+    , bpd_moderate_severe_stack_rf
     , eugr_hc_baseline2_rr
     , eugr_hc_stack_rr
     , eugr_bw_baseline2_rr
@@ -4223,12 +4755,12 @@ eval$calibration <-
   `names<-`(eval_list[str_detect(eval_list, "baseline")]) |>
   lapply(\(x) lapply(eval_df_list[[x]], calibration, seed = seed)) |>
   c(list(
-      survive_stack_gbm = survive_stack_eval_calibration$survive_stack_gbm
+      survive_stack_dnn = survive_stack_eval_calibration$survive_stack_dnn
       , rop_severe_stack_rr =
         rop_severe_stack_eval_calibration$rop_severe_stack_rr
       , bpd_stack_rf = bpd_stack_eval_calibration$bpd_stack_rf
-      , bpd_moderate_severe_stack_dnn =
-        bpd_moderate_severe_stack_eval_calibration$bpd_moderate_severe_stack_dnn
+      , bpd_moderate_severe_stack_rf =
+        bpd_moderate_severe_stack_eval_calibration$bpd_moderate_severe_stack_rf
       , eugr_hc_stack_rr = eugr_hc_stack_eval_calibration$eugr_hc_stack_rr
       , eugr_bw_stack_rr = eugr_bw_stack_eval_calibration$eugr_bw_stack_rr
       , hearing_stack_rr = hearing_stack_eval_calibration$hearing_stack_rr
@@ -4264,13 +4796,13 @@ eval$discrimination <-
     lapply(lapply(eval_df_list[[x]], select, -id), discrimination, seed = seed)
   ) |>
   c(list(
-      survive_stack_gbm = survive_stack_eval_discrimination$survive_stack_gbm
+      survive_stack_dnn = survive_stack_eval_discrimination$survive_stack_dnn
       , rop_severe_stack_rr =
         rop_severe_stack_eval_discrimination$rop_severe_stack_rr
       , bpd_stack_rf = bpd_stack_eval_discrimination$bpd_stack_rf
-      , bpd_moderate_severe_stack_dnn =
+      , bpd_moderate_severe_stack_rf =
         bpd_moderate_severe_stack_eval_discrimination[[
-          "bpd_moderate_severe_stack_dnn"
+          "bpd_moderate_severe_stack_rf"
         ]]
       , eugr_hc_stack_rr = eugr_hc_stack_eval_discrimination$eugr_hc_stack_rr
       , eugr_bw_stack_rr = eugr_bw_stack_eval_discrimination$eugr_bw_stack_rr
@@ -4305,6 +4837,174 @@ saveRDS(eval$threshold, "data/eval_threshold.rds")
 eval$threshold <- readRDS("data/eval_threshold.rds")
 ```
 
+```{r Create a list of best model names with int for evaluation, include=FALSE}
+eval_intermediate_list <-
+  eval_list |>
+  c("eugr_hc_stack1_dnn"
+    , "eugr_bw_stack1_dnn"
+  )
+```
+
+```{r Create a list of best model eval data with intermediary, include=FALSE}
+eval_intermediate_df_list <-
+  eval_df_list |>
+  c(list(
+      eugr_hc_stack1_dnn
+      , eugr_bw_stack1_dnn
+    )
+  ) |>
+  `names<-`(eval_intermediate_list)
+```
+
+```{r Create a list of best model feature data with intermediary, include=FALSE}
+feature_intermediate_df_list <-
+  paste0(
+    "inst/extdata/modeval_data_set/", eval_intermediate_list, "_train.csv"
+  ) |>
+  `names<-`(eval_intermediate_list) |>
+  lapply(read_csv, show_col_types = FALSE)
+```
+
+```{r Obtain pre-computed SHAPs of best model with intermediary, include=FALSE}
+shap_values <-
+  paste0(
+    "inst/extdata/model/", eval_intermediate_list, "_train_shap_values.csv"
+  ) |>
+  `names<-`(eval_intermediate_list) |>
+  lapply(read_csv, show_col_types = FALSE) |>
+  lapply(numerize_chr_expected_value_if_any)
+```
+
+```{r Combine SHAP with features of best model with intermediary, include=FALSE}
+shap_feature_values <-
+  shap_values |>
+  lapply(mutate, seq = seq(n())) |>
+  lapply(gather, feature, shap_value, -seq) |>
+  imap(
+    ~ .x |>
+      left_join(
+        feature_intermediate_df_list[[.y]] |>
+          unite_id_t_if_any() |>
+          select(-outcome) |>
+          mutate(expected_value = NA) |>
+          mutate(seq = seq(n())) |>
+          gather(feature, feature_value, -seq, -id_t)
+        , by = join_by(seq, feature)
+      )
+  ) |>
+  imap(
+    ~ .x |>
+      left_join(
+        eval_intermediate_df_list[[.y]]$train |>
+          mutate(seq = seq(n()))
+        ,by = join_by(seq)
+      )
+  )
+```
+
+```{r Map back SHAP values to original features, include=FALSE}
+ori_shap_feature_values <-
+  shap_feature_values |>
+  imap(~ obtain_old_dim_shap_values_if_any(.x, .y))
+```
+
+```{r Chain back SHAP values across stacked models, include=FALSE}
+stacked_ori_shap_feature_values <-
+  list(
+    survive_baseline1_rr = ori_shap_feature_values$survive_baseline1_rr
+    , survive_stack_dnn =
+      ori_shap_feature_values$survive_stack_dnn |>
+      obtain_prior_feature_shap_values_if_any(
+        ori_shap_feature_values$survive_baseline1_rr
+        , connector = "id"
+      )
+    , rop_severe_stack_rr =
+      ori_shap_feature_values$rop_severe_stack_rr |>
+      obtain_prior_feature_shap_values_if_any(
+        ori_shap_feature_values$survive_stack_dnn
+        , connector = "id_t"
+      ) |>
+      obtain_prior_feature_shap_values_if_any(
+        ori_shap_feature_values$survive_baseline1_rr
+        , connector = "id"
+      )
+    , bpd_stack_rf =
+      ori_shap_feature_values$bpd_stack_rf |>
+      obtain_prior_feature_shap_values_if_any(
+        ori_shap_feature_values$survive_stack_dnn
+        , connector = "id_t"
+      ) |>
+      obtain_prior_feature_shap_values_if_any(
+        ori_shap_feature_values$survive_baseline1_rr
+        , connector = "id"
+      )
+    , bpd_moderate_severe_stack_rf =
+      ori_shap_feature_values$bpd_moderate_severe_stack_rf |>
+      obtain_prior_feature_shap_values_if_any(
+        ori_shap_feature_values$bpd_stack_rf
+        , connector = "id_t"
+      ) |>
+      obtain_prior_feature_shap_values_if_any(
+        ori_shap_feature_values$survive_stack_dnn
+        , connector = "id_t"
+      ) |>
+      obtain_prior_feature_shap_values_if_any(
+        ori_shap_feature_values$survive_baseline1_rr
+        , connector = "id"
+      )
+    , eugr_hc_baseline2_rr =
+      ori_shap_feature_values$eugr_hc_baseline2_rr |>
+      obtain_prior_feature_shap_values_if_any(
+        ori_shap_feature_values$survive_baseline1_rr
+        , connector = "id"
+      )
+    , eugr_hc_stack_rr =
+      ori_shap_feature_values$eugr_hc_stack_rr |>
+      obtain_prior_feature_shap_values_if_any(
+        ori_shap_feature_values$eugr_hc_stack1_dnn
+        , connector = "id_t"
+      ) |>
+      obtain_prior_feature_shap_values_if_any(
+        ori_shap_feature_values$eugr_hc_baseline2_rr
+        , connector = "id"
+      ) |>
+      obtain_prior_feature_shap_values_if_any(
+        ori_shap_feature_values$survive_baseline1_rr
+        , connector = "id"
+      )
+    , eugr_bw_baseline2_rr =
+      ori_shap_feature_values$eugr_bw_baseline2_rr |>
+      obtain_prior_feature_shap_values_if_any(
+        ori_shap_feature_values$survive_baseline1_rr
+        , connector = "id"
+      )
+    , eugr_bw_stack_rr =
+      ori_shap_feature_values$eugr_bw_stack_rr |>
+      obtain_prior_feature_shap_values_if_any(
+        ori_shap_feature_values$eugr_bw_stack1_dnn
+        , connector = "id_t"
+      ) |>
+      obtain_prior_feature_shap_values_if_any(
+        ori_shap_feature_values$eugr_bw_baseline2_rr
+        , connector = "id"
+      ) |>
+      obtain_prior_feature_shap_values_if_any(
+        ori_shap_feature_values$survive_baseline1_rr
+        , connector = "id"
+      )
+    , hearing_stack_rr =
+      ori_shap_feature_values$hearing_stack_rr |>
+      obtain_prior_feature_shap_values_if_any(
+        ori_shap_feature_values$survive_stack_dnn
+        , connector = "id_t"
+      ) |>
+      obtain_prior_feature_shap_values_if_any(
+        ori_shap_feature_values$survive_baseline1_rr
+        , connector = "id"
+      )
+  )
+```
+
 ## Evaluation metrics
 
 ### Survival baseline
@@ -4320,41 +5020,47 @@ th$survive_baseline1_rr <-
 eval_plot$survive_baseline1_rr <-
   lapply(eval, \(x) x$survive_baseline1_rr$test) |>
   arrange_eval_plot(
-    threshold = th$survive_baseline1_rr
+    shap_feature_values = stacked_ori_shap_feature_values$survive_baseline1_rr
+    , threshold = th$survive_baseline1_rr
     , dc_xby = 0.1, dc_yby = 0.1, dc_ta_angle = -60
+    , seed = seed
   )
 ```
 
-```{r figure-6, echo=FALSE, fig.height=4, fig.width=10}
+```{r figure-6, echo=FALSE, fig.height=6.5, fig.width=10}
 eval_plot$survive_baseline1_rr
 ```
 
-Figure 6. Survival baseline prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; and (C) ROC curve. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics.
+Figure 6. Survival baseline prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
 
 ### Survival stack
 
 ```{r Determine threshold for survive stack by train set, include=FALSE}
-th$survive_stack_gbm <-
-  eval$threshold$survive_stack_gbm$train |>
+th$survive_stack_dnn <-
+  eval$threshold$survive_stack_dnn$train |>
   filter(metric == "th") |>
   pull(avg)
 ```
 
 ```{r Evaluate survive stack using test set, include=FALSE}
-eval_plot$survive_stack_gbm <-
-  lapply(eval, \(x) x$survive_stack_gbm$test) |>
+eval_plot$survive_stack_dnn <-
+  lapply(eval, \(x) x$survive_stack_dnn$test) |>
   arrange_eval_plot(
-    threshold = th$survive_stack_gbm
+    shap_feature_values = stacked_ori_shap_feature_values$survive_stack_dnn
+    , threshold = th$survive_stack_dnn
     , dc_xby = 0.1, dc_yby = 0.1
     , dc_ta_angle = -60
+    , seed = seed
+    , transparency = 0.05
+    , shap_height = 3.5
   )
 ```
 
-```{r figure-7, echo=FALSE, fig.height=4, fig.width=10}
-eval_plot$survive_stack_gbm
+```{r figure-7, echo=FALSE, fig.height=7.5, fig.width=10}
+eval_plot$survive_stack_dnn
 ```
 
-Figure 7. Survival stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; and (C) ROC curve. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics.
+Figure 7. Survival stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
 
 ### Severe ROP stack
 
@@ -4369,18 +5075,22 @@ th$rop_severe_stack_rr <-
 eval_plot$rop_severe_stack_rr <-
   lapply(eval, \(x) x$rop_severe_stack_rr$test) |>
   arrange_eval_plot(
-    threshold = th$rop_severe_stack_rr
+    shap_feature_values = stacked_ori_shap_feature_values$rop_severe_stack_rr
+    , threshold = th$rop_severe_stack_rr
     , dc_xmax = 0.6, dc_xby = 0.1
     , dc_ymax = 0.15, dc_yby = 0.01
     , dc_ta_angle = -80
+    , seed = seed
+    , transparency = 0.05
+    , shap_height = 4
   )
 ```
 
-```{r figure-8, echo=FALSE, fig.height=4, fig.width=10}
+```{r figure-8, echo=FALSE, fig.height=8, fig.width=10}
 eval_plot$rop_severe_stack_rr
 ```
 
-Figure 8. Severe ROP stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; and (C) ROC curve. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics.
+Figure 8. Severe ROP stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
 
 ### BPD stack
 
@@ -4395,44 +5105,53 @@ th$bpd_stack_rf <-
 eval_plot$bpd_stack_rf <-
   lapply(eval, \(x) x$bpd_stack_rf$test) |>
   arrange_eval_plot(
-    threshold = th$bpd_stack_rf
+    shap_feature_values = stacked_ori_shap_feature_values$bpd_stack_rf
+    , threshold = th$bpd_stack_rf
     , dc_xmax = 0.6, dc_xby = 0.1
     , dc_ymax = 0.35, dc_yby = 0.05
     , dc_ta_angle = -70
+    , seed = seed
+    , transparency = 0.05
+    , shap_height = 3
   )
 ```
 
-```{r figure-9, echo=FALSE, fig.height=4, fig.width=10}
+```{r figure-9, echo=FALSE, fig.height=7, fig.width=10}
 eval_plot$bpd_stack_rf
 ```
 
-Figure 9. BPD stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; and (C) ROC curve. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics.
+Figure 9. BPD stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
 
 ### Moderate/severe BPD stack
 
 ```{r Determine threshold for moderate/severe BPD stack by train set, include=FALSE}
-th$bpd_moderate_severe_stack_dnn <-
-  eval$threshold$bpd_moderate_severe_stack_dnn$train |>
+th$bpd_moderate_severe_stack_rf <-
+  eval$threshold$bpd_moderate_severe_stack_rf$train |>
   filter(metric == "th") |>
   pull(avg)
 ```
 
 ```{r Evaluate moderate/severe BPD stack using test set, include=FALSE}
-eval_plot$bpd_moderate_severe_stack_dnn <-
-  lapply(eval, \(x) x$bpd_moderate_severe_stack_dnn$test) |>
+eval_plot$bpd_moderate_severe_stack_rf <-
+  lapply(eval, \(x) x$bpd_moderate_severe_stack_rf$test) |>
   arrange_eval_plot(
-    threshold = th$bpd_moderate_severe_stack_dnn
+    shap_feature_values =
+      stacked_ori_shap_feature_values$bpd_moderate_severe_stack_rf
+    , threshold = th$bpd_moderate_severe_stack_rf
     , dc_xmax = 0.6, dc_xby = 0.1
     , dc_ymax = 0.35, dc_yby = 0.05
     , dc_ta_angle = -70
+    , seed = seed
+    , transparency = 0.05
+    , shap_height = 3.5
   )
 ```
 
-```{r figure-10, echo=FALSE, fig.height=4, fig.width=10}
-eval_plot$bpd_moderate_severe_stack_dnn
+```{r figure-10, echo=FALSE, fig.height=7.5, fig.width=10}
+eval_plot$bpd_moderate_severe_stack_rf
 ```
 
-Figure 10. Moderate/severe BPD stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; and (C) ROC curve. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics.
+Figure 10. Moderate/severe BPD stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
 
 ### EUGR-HC baseline
 
@@ -4447,18 +5166,20 @@ th$eugr_hc_baseline2_rr <-
 eval_plot$eugr_hc_baseline2_rr <-
   lapply(eval, \(x) x$eugr_hc_baseline2_rr$test) |>
   arrange_eval_plot(
-    threshold = th$eugr_hc_baseline2_rr
+    shap_feature_values = stacked_ori_shap_feature_values$eugr_hc_baseline2_rr
+    , threshold = th$eugr_hc_baseline2_rr
     , dc_xmax = 0.6, dc_xby = 0.1
     , dc_ymax = 0.3, dc_yby = 0.05
     , dc_ta_angle = -75
+    , seed = seed
   )
 ```
 
-```{r figure-11, echo=FALSE, fig.height=4, fig.width=10}
+```{r figure-11, echo=FALSE, fig.height=6.5, fig.width=10}
 eval_plot$eugr_hc_baseline2
 ```
 
-Figure 11. EUGR-HC baseline prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; and (C) ROC curve. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics.
+Figure 11. EUGR-HC baseline prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
 
 ### EUGR-HC stack
 
@@ -4473,18 +5194,22 @@ th$eugr_hc_stack_rr <-
 eval_plot$eugr_hc_stack_rr <-
   lapply(eval, \(x) x$eugr_hc_stack_rr$test) |>
   arrange_eval_plot(
-    threshold = th$eugr_hc_stack_rr
+    shap_feature_values = stacked_ori_shap_feature_values$eugr_hc_stack_rr
+    , threshold = th$eugr_hc_stack_rr
     , dc_xmax = 0.6, dc_xby = 0.1
     , dc_ymax = 0.3, dc_yby = 0.05
     , dc_ta_angle = -75
+    , seed = seed
+    , transparency = 0.05
+    , shap_height = 4
   )
 ```
 
-```{r figure-12, echo=FALSE, fig.height=4, fig.width=10}
+```{r figure-12, echo=FALSE, fig.height=8, fig.width=10}
 eval_plot$eugr_hc_stack_rr
 ```
 
-Figure 12. EUGR-HC stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; and (C) ROC curve. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics.
+Figure 12. EUGR-HC stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
 
 ### EUGR-BW baseline
 
@@ -4499,18 +5224,20 @@ th$eugr_bw_baseline2_rr <-
 eval_plot$eugr_bw_baseline2_rr <-
   lapply(eval, \(x) x$eugr_bw_baseline2_rr$test) |>
   arrange_eval_plot(
-    threshold = th$eugr_bw_baseline2_rr
+    shap_feature_values = stacked_ori_shap_feature_values$eugr_bw_baseline2_rr
+    , threshold = th$eugr_bw_baseline2_rr
     , dc_xmax = 0.4, dc_xby = 0.1
     , dc_ymax = 0.25, dc_yby = 0.05
     , dc_ta_angle = -75
+    , seed = seed
   )
 ```
 
-```{r figure-13, echo=FALSE, fig.height=4, fig.width=10}
+```{r figure-13, echo=FALSE, fig.height=6.5, fig.width=10}
 eval_plot$eugr_bw_baseline2
 ```
 
-Figure 13. EUGR-BW baseline prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; and (C) ROC curve. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics.
+Figure 13. EUGR-BW baseline prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
 
 ### EUGR-BW stack
 
@@ -4525,18 +5252,22 @@ th$eugr_bw_stack_rr <-
 eval_plot$eugr_bw_stack_rr <-
   lapply(eval, \(x) x$eugr_bw_stack_rr$test) |>
   arrange_eval_plot(
-    threshold = th$eugr_bw_stack_rr
+    shap_feature_values = stacked_ori_shap_feature_values$eugr_bw_stack_rr
+    , threshold = th$eugr_bw_stack_rr
     , dc_xmax = 0.6, dc_xby = 0.1
     , dc_ymax = 0.25, dc_yby = 0.05
     , dc_ta_angle = -80
+    , seed = seed
+    , transparency = 0.05
+    , shap_height = 4
   )
 ```
 
-```{r figure-14, echo=FALSE, fig.height=4, fig.width=10}
+```{r figure-14, echo=FALSE, fig.height=8, fig.width=10}
 eval_plot$eugr_bw_stack
 ```
 
-Figure 14. EUGR-BW stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; and (C) ROC curve. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics.
+Figure 14. EUGR-BW stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
 
 ### Failed hearing test stack
 
@@ -4551,18 +5282,22 @@ th$hearing_stack_rr <-
 eval_plot$hearing_stack_rr <-
   lapply(eval, \(x) x$hearing_stack_rr$test) |>
   arrange_eval_plot(
-    threshold = th$hearing_stack_rr
+    shap_feature_values = stacked_ori_shap_feature_values$hearing_stack_rr
+    , threshold = th$hearing_stack_rr
     , dc_xmax = 0.3, dc_xby = 0.1
     , dc_ymax = 0.12, dc_yby = 0.02
     , dc_ta_angle = -80
+    , seed = seed
+    , transparency = 0.05
+    , shap_height = 3.5
   )
 ```
 
-```{r figure-15, echo=FALSE, fig.height=4, fig.width=10}
+```{r figure-15, echo=FALSE, fig.height=7.5, fig.width=10}
 eval_plot$hearing_stack_rr
 ```
 
-Figure 15. Failed hearing test stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; and (C) ROC curve. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics.
+Figure 15. Failed hearing test stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
 
 ## Predictive performance
 
@@ -4572,7 +5307,9 @@ eval$cm <-
   `names<-`(names(eval_df_list)) |>
   pblapply(
     \(x)
-    lapply(eval_df_list[[x]], select, -id)[c("validation", "test")] |>
+    lapply(eval_df_list[[x]], select, -id)[
+      c("validation", "test", "independent_test")
+    ] |>
     lapply(
       thresholding
       , custom_metric = "th", custom_ref = th[[x]], seed = seed
@@ -4620,10 +5357,53 @@ cm_summary <-
   select(model, `AUC-ROC`, TH, everything())
 ```
 
+```{r Summarize confusion matrix using indep-test set, include=FALSE}
+cm_summary_indep_test <-
+  eval[c("calibration", "decision", "discrimination")] |>
+  lapply(
+    \(x)
+    reduce(imap(x, ~ mutate(.x$independent_test$metrics, model = .y)), rbind)
+  ) |>
+  reduce(rbind) |>
+  filter(term %in% c("AUC-ROC")) |>
+  mutate(lb = estimate - ci, ub = estimate + ci) |>
+  select(-ci) |>
+  select(model, metric = term, avg = estimate, everything()) |>
+  rbind(
+    eval$cm |>
+      imap(~ mutate(.x$independent_test, model = .y)) |>
+      reduce(rbind) |>
+      filter(ref_type == "TH" & !metric %in% c("th", "nb")) |>
+      mutate(metric = str_to_upper(metric)) |>
+      select(-ref_type, -ref_value) |>
+      select(model, metric, avg, everything())
+  ) |>
+  mutate_at(c("avg", "lb", "ub"), format, digits = 2) |>
+  unite(ci, lb, ub, sep = ", ") |>
+  mutate_at("ci", \(x) paste0("(", x, ")")) |>
+  unite(summary, avg, ci, sep = " ") |>
+  mutate(
+    model = factor(model, unique(model))
+    , metric = factor(metric, c("AUC-ROC", "F1", "TNR", "TPR", "PPV", "NPV"))
+  ) |>
+  spread(metric, summary) |>
+  left_join(
+    reduce(imap(th, ~ data.frame(model = .y, TH = .x)), rbind)
+    , by = join_by(model)
+  ) |>
+  select(model, `AUC-ROC`, TH, everything())
+```
+
 ```{r table-18, echo=FALSE}
 cm_summary |>
+  mutate(dataset = "Modeling") |>
+  rbind(mutate(cm_summary_indep_test, dataset = "Independent test")) |>
+  select(model, dataset, everything()) |>
+  mutate(dataset = factor(dataset, unique(dataset))) |>
+  arrange(model, dataset) |>
+  mutate(model = ifelse(duplicated(model), "", model)) |>
   kable(
-    caption = "Table 18. Predictive performance using test set."
+    caption = "Table 18. Predictive performance using test sets."
     , format = kable_format
   ) |>
   footnote(
@@ -4641,8 +5421,98 @@ cm_summary |>
   column_spec(1:7, extra_css = "vertical-align:top;")
 ```
 
+```{r Compute val-CM by train-set cutoff for the selected time, include=FALSE}
+eval$cm_selected_time_val <-
+  modeval_data_set |>
+  lapply(\(x) filter(x$residual$`20`$validation, !is.na(outcome))) |>
+  lapply(
+    \(x)
+    x |>
+      select_at(colnames(x)[colnames(x) != "ga_wk"]) |>
+      left_join(
+        modeval_data_set$survive$residual$`20`$validation |>
+          select(id, t, ga_wk)
+        , by = join_by(id, t)
+      ) |>
+      select(id, ga_wk, t, everything())
+  ) |>
+  lapply(
+    \(x)
+    c(1, 1*7, 2*7, 4*7, 6*7) |>
+      `names<-`(paste0("t_", c(1, 1*7, 2*7, 4*7, 6*7))) |>
+      lapply(
+        \(y)
+        x |>
+          mutate(seq = seq(n())) |>
+          filter(t == y) |>
+          pull(seq)
+      ) |>
+      c(c(36*7) |>
+          `names<-`(paste0("ga_wk_t_", c(36))) |>
+          lapply(
+            \(y)
+            x |>
+              mutate(seq = seq(n()), ga_wk_t = ga_wk * 7 + t) |>
+              filter(ga_wk_t == y) |>
+              pull(seq)
+          )
+      )
+  ) |>
+  imap(
+    ~ .x |>
+      lapply(
+        \(x)
+        list(
+          eval_df =
+            eval_df_list[
+              !str_detect(names(eval_df_list), "baseline")
+              & str_detect(names(eval_df_list), paste0("^", .y, "_"))
+            ][[1]]$validation[x, , drop = FALSE] |>
+            `rownames<-`(NULL) |>
+            select(-id)
+          , custom_ref =
+            th[
+              !str_detect(names(th), "baseline")
+              & str_detect(names(th), paste0("^", .y, "_"))
+            ][[1]]
+        )
+      )
+  ) |>
+  pblapply(
+    \(x)
+    x |>
+      lapply(
+        \(x)
+        thresholding(
+          eval_df = x$eval_df
+          , custom_metric = "th"
+          , custom_ref = x$custom_ref
+          , seed = seed
+        )
+      )
+  )
+```
+
+```{r Summarize CM using validation set for the selected time, include=FALSE}
+cm_selected_time_summary_val <-
+  eval$cm_selected_time_val |>
+  imap(
+    ~ names(.x) |>
+      lapply(
+        \(x)
+        mutate(.x[[x]], outcome = .y, timing = x)
+      ) |>
+      reduce(rbind)
+  ) |>
+  reduce(rbind) |>
+  filter(ref_type == "TH" & !metric %in% c("th", "nb")) |>
+  mutate(metric = str_to_upper(metric)) |>
+  select(-ref_type, -ref_value) |>
+  select(outcome, metric, avg, everything())
+```
+
 ```{r Compute CM using train-set threshold for the selected time, include=FALSE}
-eval$cm_selected_time <-
+cm_selected_time_test_input <-
   modeval_data_set |>
   lapply(\(x) filter(x$residual$`20`$test, !is.na(outcome))) |>
   lapply(
@@ -4658,8 +5528,8 @@ eval$cm_selected_time <-
   ) |>
   lapply(
     \(x)
-    c(2*7, 4*7, 6*7) |>
-      `names<-`(paste0("t_", c(2*7, 4*7, 6*7))) |>
+    c(1, 1*7, 2*7, 4*7, 6*7) |>
+      `names<-`(paste0("t_", c(1, 1*7, 2*7, 4*7, 6*7))) |>
       lapply(
         \(y)
         x |>
@@ -4697,7 +5567,10 @@ eval$cm_selected_time <-
             ][[1]]
         )
       )
-  ) |>
+  )
+
+eval$cm_selected_time <-
+  cm_selected_time_test_input |>
   pblapply(
     \(x)
     x |>
@@ -4728,7 +5601,215 @@ cm_selected_time_summary <-
   filter(ref_type == "TH" & !metric %in% c("th", "nb")) |>
   mutate(metric = str_to_upper(metric)) |>
   select(-ref_type, -ref_value) |>
-  select(outcome, metric, avg, everything()) |>
+  select(outcome, metric, avg, everything())
+```
+
+```{r Compute indep-test-CM by train-set cutoff for the sel time, include=FALSE}
+cm_selected_time_indep_test_input <-
+  modeval_data_set_indep_test |>
+  lapply(\(x) filter(x$residual$`20`$independent_test, !is.na(outcome))) |>
+  lapply(
+    \(x)
+    x |>
+      select_at(colnames(x)[colnames(x) != "ga_wk"]) |>
+      left_join(
+        modeval_data_set_indep_test$survive$residual$`20`$independent_test |>
+          select(id, t, ga_wk)
+        , by = join_by(id, t)
+      ) |>
+      select(id, ga_wk, t, everything())
+  ) |>
+  lapply(
+    \(x)
+    c(1, 1*7, 2*7, 4*7, 6*7) |>
+      `names<-`(paste0("t_", c(1, 1*7, 2*7, 4*7, 6*7))) |>
+      lapply(
+        \(y)
+        x |>
+          mutate(seq = seq(n())) |>
+          filter(t == y) |>
+          pull(seq)
+      ) |>
+      c(c(36*7) |>
+          `names<-`(paste0("ga_wk_t_", c(36))) |>
+          lapply(
+            \(y)
+            x |>
+              mutate(seq = seq(n()), ga_wk_t = ga_wk * 7 + t) |>
+              filter(ga_wk_t == y) |>
+              pull(seq)
+          )
+      )
+  ) |>
+  imap(
+    ~ .x |>
+      lapply(
+        \(x)
+        list(
+          eval_df =
+            eval_df_list[
+              !str_detect(names(eval_df_list), "baseline")
+              & str_detect(names(eval_df_list), paste0("^", .y, "_"))
+            ][[1]]$validation[x, , drop = FALSE] |>
+            `rownames<-`(NULL) |>
+            select(-id)
+          , custom_ref =
+            th[
+              !str_detect(names(th), "baseline")
+              & str_detect(names(th), paste0("^", .y, "_"))
+            ][[1]]
+        )
+      )
+  )
+
+eval$cm_selected_time_indep_test <-
+  cm_selected_time_indep_test_input |>
+  pblapply(
+    \(x)
+    x |>
+      lapply(
+        \(x)
+        thresholding(
+          eval_df = x$eval_df
+          , custom_metric = "th"
+          , custom_ref = x$custom_ref
+          , seed = seed
+        )
+      )
+  )
+```
+
+```{r Summarize CM using indep-test set for the selected time, include=FALSE}
+cm_selected_time_summary_indep_test <-
+  eval$cm_selected_time_indep_test |>
+  imap(
+    ~ names(.x) |>
+      lapply(
+        \(x)
+        mutate(.x[[x]], outcome = .y, timing = x)
+      ) |>
+      reduce(rbind)
+  ) |>
+  reduce(rbind) |>
+  filter(ref_type == "TH" & !metric %in% c("th", "nb")) |>
+  mutate(metric = str_to_upper(metric)) |>
+  select(-ref_type, -ref_value) |>
+  select(outcome, metric, avg, everything())
+```
+
+```{r figure-16, fig.height=3.5, fig.width=7}
+mutate(cm_selected_time_summary_val, set = "Validation") |>
+  rbind(mutate(cm_selected_time_summary, set = "Test")) |>
+  timing_selection_plot("survive", "t_7")
+```
+
+Figure 16. Performance for predicting survival at particular time using the chosen threshold. The best timing was selected according to TPR and PPV using validation set. PPV, positive predictive value or precision; TPR, true positive rate or sensitivity.
+
+```{r figure-17, fig.height=5, fig.width=7}
+mutate(cm_selected_time_summary_val, set = "Validation") |>
+  rbind(mutate(cm_selected_time_summary, set = "Test")) |>
+  timing_selection_plot("rop_severe", "t_14")
+```
+
+Figure 17. Performance for predicting severe ROP at particular time using the chosen threshold. The best timing was selected according to TPR, TNR, and NPV using validation set. NPV, negative predictive value; ROP, retinopathy of prematurity; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity.
+
+```{r figure-18, fig.height=5, fig.width=7}
+mutate(cm_selected_time_summary_val, set = "Validation") |>
+  rbind(mutate(cm_selected_time_summary, set = "Test")) |>
+  timing_selection_plot("bpd", "t_28")
+```
+
+Figure 18. Performance for predicting BPD at particular time using the chosen threshold. The best timing was selected according to TPR, TNR, and NPV using validation set. BPD, bronchopulmonary disease; NPV, negative predictive value; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity.
+
+```{r figure-19, fig.height=5, fig.width=7}
+mutate(cm_selected_time_summary_val, set = "Validation") |>
+  rbind(mutate(cm_selected_time_summary, set = "Test")) |>
+  timing_selection_plot("bpd_moderate_severe", "t_28")
+```
+
+Figure 19. Performance for predicting moderate-to-severe BPD at particular time using the chosen threshold. The best timing was selected according to TPR, TNR, and NPV using validation set. BPD, bronchopulmonary disease; NPV, negative predictive value; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity.
+
+```{r figure-20, fig.height=5, fig.width=7}
+mutate(cm_selected_time_summary_val, set = "Validation") |>
+  rbind(mutate(cm_selected_time_summary, set = "Test")) |>
+  timing_selection_plot("eugr_hc", "t_28")
+```
+
+Figure 20. Performance for predicting EUGR-HC at particular time using the chosen threshold. The best timing was selected according to TPR, PPV, TNR, and NPV using validation set. EUGR-HC, extrauterine growth restriction by head circumference; NPV, negative predictive value; PPV, positive predictive value or precision; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity.
+
+```{r figure-21, fig.height=5, fig.width=7}
+mutate(cm_selected_time_summary_val, set = "Validation") |>
+  rbind(mutate(cm_selected_time_summary, set = "Test")) |>
+  timing_selection_plot("eugr_bw", "t_14")
+```
+
+Figure 21. Performance for predicting EUGR-BW at particular time using the chosen threshold. The best timing was selected according to TPR and NPV using validation set. EUGR-BW, extrauterine growth restriction by body weight; NPV, negative predictive value; TPR, true positive rate or sensitivity.
+
+```{r figure-22, fig.height=5, fig.width=7}
+mutate(cm_selected_time_summary_val, set = "Validation") |>
+  rbind(mutate(cm_selected_time_summary, set = "Test")) |>
+  timing_selection_plot("hearing", "t_14")
+```
+
+Figure 22. Performance for predicting failed hearing test at particular time using the chosen threshold. The best timing was selected according to TPR, TNR, and NPV using validation set. NPV, negative predictive value; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity.
+
+```{r figure-23, echo=FALSE, fig.height=5, fig.width=7}
+figure23 <-
+  mutate(cm_selected_time_summary, set = "Test") |>
+  rbind(
+    mutate(cm_selected_time_summary_indep_test, set = "Independent test")
+  ) |>
+  timing_selection_plot(show_plot = FALSE) |>
+  timing_selection_filter()
+
+figure23 |>
+  filter(set == "Independent test") |>
+  left_join(
+    figure23 |>
+      filter(set == "Test") |>
+      select(outcome, metric, timing, ref = lb)
+    , by = join_by(outcome, metric, timing)
+  ) |>
+  mutate(
+    ci = ub - avg
+    , avg = avg - ref
+    , lb = avg - ci
+    , ub = avg + ci
+  ) |>
+  select(-ci) |>
+  mutate(lower = factor(ifelse(ub < -0.05, "Yes", "No"), c("Yes", "No"))) |>
+  mutate(outcome = paste0(outcome, "\n", timing)) |>
+  mutate(outcome = factor(outcome, unique(outcome))) |>
+  mutate(metric = factor(metric, rev(c("TPR", "PPV", "F1", "TNR", "NPV")))) |>
+  ggplot(aes(metric, avg, color = lower))  +
+  geom_hline(yintercept = -0.05, lty = 2) +
+  geom_errorbar(aes(ymin = lb, ymax = ub), width = 0.5, na.rm = TRUE) +
+  geom_point(size = 1, na.rm = TRUE) +
+  facet_grid(outcome ~ ., scale = "free", space = "free", switch = "y") +
+  coord_flip() +
+  xlab("") +
+  scale_y_continuous(
+    "Difference from test set (95% CI)"
+    , breaks = seq(-1, 1, 0.1), limits = c(-0.25, 0.25)
+  ) +
+  scale_color_discrete("Less than\ntest set\nby >5% from\nlower bound?") +
+  theme(
+    strip.text.y.left = element_text(angle = 0, hjust = 1)
+    , strip.background = element_blank()
+    , strip.placement = "outside"
+  )
+```
+
+Figure 23. Predictive performance using independent test sets at particular time.
+
+```{r table-19, echo=FALSE}
+cm_selected_time_summary |>
+  mutate(dataset = "Modeling") |>
+  rbind(
+    cm_selected_time_summary_indep_test |>
+      mutate(dataset = "Independent test")
+  ) |>
+  timing_selection_filter() |>
   mutate_at(c("avg", "lb", "ub"), format, digits = 2) |>
   unite(ci, lb, ub, sep = ", ") |>
   mutate_at("ci", \(x) paste0("(", x, ")")) |>
@@ -4746,11 +5827,10 @@ cm_selected_time_summary <-
       rename(outcome = model)
     , by = join_by(outcome)
   ) |>
-  select(outcome, timing, TH, everything())
-```
-
-```{r table-19, echo=FALSE}
-cm_selected_time_summary |>
+  select(outcome, timing, TH, dataset, everything()) |>
+  mutate(TH = ifelse(duplicated(paste0(outcome, timing, TH)), "", TH)) |>
+  mutate(timing = ifelse(duplicated(paste0(outcome, timing)), "", timing)) |>
+  mutate(outcome = ifelse(duplicated(outcome), "", outcome)) |>
   mutate(
     F1 = ifelse(str_detect(F1, "NaN"), "N/A*", F1)
     , TNR = ifelse(str_detect(TNR, "NaN"), "N/A†", TNR)
@@ -4781,6 +5861,107 @@ cm_selected_time_summary |>
   kable_classic() |>
   column_spec(1:7, extra_css = "vertical-align:top;")
 ```
+
+```{r BPD indep-test discrimination, include=FALSE}
+cm_selected_time_indep_test_bpd_disc <-
+  cm_selected_time_indep_test_input$bpd$t_28$eval_df |>
+  discrimination(seed = seed)
+```
+
+```{r figure-24, echo=FALSE, fig.height=2, fig.width=7}
+cm_selected_time_indep_test_bpd_disc$metrics |>
+  mutate(
+    study = "Our study, 95% CI"
+    , lb = estimate - ci
+    , ub = estimate + ci
+  ) |>
+  select(study, avg = estimate, lb, ub) |>
+  rbind(
+    read_csv(
+      "inst/extdata/10.1016_j.jpeds.2023.01.024.csv"
+      , show_col_types = FALSE
+    )
+  ) |>
+  rbind(
+    read_csv(
+        "inst/extdata/10.1038_s41390-022-02451-8.csv"
+        , show_col_types = FALSE
+      ) |>
+      mutate(study = paste0(study, "*"))
+  ) |>
+  mutate(set = "External validation") |>
+  rbind(
+    read_csv(
+        "inst/extdata/10.1016_j.heliyon.2023.e18964.csv"
+        , show_col_types = FALSE
+      ) |>
+      mutate(set = "Internal validation")
+  ) |>
+  rbind(
+    read_csv(
+        "inst/extdata/10.1164_rccm.201101-0055OC.csv"
+        , show_col_types = FALSE
+      ) |>
+      mutate(set = "Internal validation")
+  ) |>
+  mutate_at("study", \(x) factor(x, rev(unique(x)))) |>
+  mutate_at("set", \(x) factor(x, rev(unique(x)))) |>
+  ggplot(aes(study, avg, color = set)) +
+  geom_errorbar(aes(ymin = lb, ymax = ub), width = 0.2) +
+  geom_point() +
+  coord_flip() +
+  xlab("") +
+  ylab("c-statistic") +
+  scale_color_discrete("")
+```
+
+Figure 24. Predictive performance of BPD prediction models in our study versus previous studies. *, Kwok TC et al. (2023) did not summarize the estimates; hence, each individual's c-statistics are shown (n=6); BPD, bronchopulmonary disease; CI, confidence interval; PI, prediction interval.
+
+```{r Moderate/severe BPD test discrimination, include=FALSE}
+cm_selected_time_test_bpd_moderate_severe_disc <-
+  cm_selected_time_test_input$bpd_moderate_severe$t_28$eval_df |>
+  discrimination(seed = seed)
+```
+
+```{r Moderate/severe BPD indep-test discrimination, include=FALSE}
+cm_selected_time_indep_test_bpd_moderate_severe_disc <-
+  cm_selected_time_indep_test_input$bpd_moderate_severe$t_28$eval_df |>
+  discrimination(seed = seed)
+```
+
+```{r figure-25, echo=FALSE, fig.height=1.5, fig.width=7}
+cm_selected_time_test_bpd_moderate_severe_disc$metrics |>
+  mutate(
+    study = "Our study, 95% CI (internal validation)"
+    , lb = estimate - ci
+    , ub = estimate + ci
+  ) |>
+  select(study, avg = estimate, lb, ub) |>
+  rbind(
+    cm_selected_time_indep_test_bpd_moderate_severe_disc$metrics |>
+      mutate(
+        study = "Our study, 95% CI (external validation)"
+        , lb = estimate - ci
+        , ub = estimate + ci
+      ) |>
+      select(study, avg = estimate, lb, ub)
+  ) |>
+  rbind(
+    read_csv(
+      "inst/extdata/10.3389_fped.2023.1102878.csv"
+      , show_col_types = FALSE
+    )
+  ) |>
+  mutate_at("study", \(x) factor(x, rev(unique(x)))) |>
+  ggplot(aes(study, avg)) +
+  geom_errorbar(aes(ymin = lb, ymax = ub), width = 0.2) +
+  geom_point() +
+  coord_flip() +
+  xlab("") +
+  scale_y_continuous("c-statistic", limits = c(0.5, 1))
+```
+
+Figure 25. Predictive performance of moderate/severe BPD prediction models in our study versus previous studies. BPD, bronchopulmonary disease; CI, confidence interval.
 
 # Model deployment
 
@@ -4985,7 +6166,7 @@ demo_trajectories <-
   arrange(eval_type, target, t)
 ```
 
-```{r figure-16, echo=FALSE, fig.height=5, fig.width=7}
+```{r figure-26, echo=FALSE, fig.height=5, fig.width=7}
 demo_trajectories |>
   filter(eval_type == "other_outcomes_true") |>
   mutate(
@@ -5016,7 +6197,7 @@ demo_trajectories |>
   )
 ```
 
-Figure 16. A case with ~50% truly-predicted survive and ~20% truly-predicted positives for other outcomes.
+Figure 26. A case with ~50% truly-predicted survive and ~20% truly-predicted positives for other outcomes.
 
 ```{r Plot demo trajectories, include=FALSE}
 demo_trajectories_plot <-
@@ -5060,17 +6241,17 @@ demo_trajectories_plot <-
   )
 ```
 
-```{r figure-17, echo=FALSE, fig.height=3, fig.width=7}
+```{r figure-27, echo=FALSE, fig.height=3, fig.width=7}
 demo_trajectories_plot[[1]]
 ```
 
-Figure 17. Survival trajectories with ~90% truly and 1+ falsely predicted deaths and ~20% falsely predicted survive. Vertical dashed line indicates death age.
+Figure 27. Survival trajectories with ~90% truly and 1+ falsely predicted deaths and ~20% falsely predicted survive. Vertical dashed line indicates death age.
 
-```{r figure-18, echo=FALSE, fig.height=5, fig.width=7}
+```{r figure-28, echo=FALSE, fig.height=5, fig.width=7}
 demo_trajectories_plot[[2]]
 ```
 
-Figure 18. Other outcome trajectories with ~20% truly and ~20% falsely predicted outcomes among ~50% truly predicted survive.
+Figure 28. Other outcome trajectories with ~20% truly and ~20% falsely predicted outcomes among ~50% truly predicted survive.
 
 ```{r Required features, include=FALSE}
 pred_features <-
@@ -5148,13 +6329,165 @@ pred_features |>
   column_spec(1:3, extra_css = "vertical-align:top;")
 ```
 
+```{r eval=FALSE, include=FALSE}
+saveRDS(dim_red_train_regression, "data/dep_dim_red_train_regression.rds")
+saveRDS(new_dimension_new_name, "data/dep_new_dimension_new_name.rds")
+dr_model$survive$baseline$`20` |>
+  saveRDS("data/dep_dr_model_survive_baseline_20.rds")
+dr_model$survive$residual$`200` |>
+  saveRDS("data/dep_dr_model_survive_residual_200.rds")
+```
 
+## Severe ROP
 
+```{r Severe ROP - Check input its range, eval=FALSE, include=FALSE}
+modeval_data_set_ori$survive$baseline$train |>
+  summary()
 
+modeval_data_set$survive$baseline$`20`$train |>
+  summary()
 
+modeval_data_set_ori$survive$residual$train |>
+  filter(t == 14) |>
+  summary()
 
+modeval_data_set_ori$rop_severe$residual$train |>
+  filter(t == 14) |>
+  summary()
+```
 
+```{r Severe ROP - Check models and inputs, eval=FALSE, include=FALSE}
+model_stacks
 
+eval_intermediate_list
+
+modeval_data_set_ori$survive$baseline$train |>
+  dep_reduce_dim_pca(
+    dr_model$survive$baseline$`20`
+    , "survive", "baseline", "20"
+  )
+
+modeval_data_set$survive$baseline$`20`$train
+
+modeval_data_set_ori$survive$residual$train |>
+  dep_reduce_dim_pca(
+    dr_model$survive$residual$`200`
+    , "survive", "residual", "200"
+  ) |>
+  mutate(prior = NA) |>
+  select(id, prior, everything())
+
+modeval_data_set$survive$residual$`200`$train
+
+modeval_data_set_ori$rop_severe$residual$train |>
+  mutate(prior = NA) |>
+  select(id, prior, everything())
+
+modeval_data_set$rop_severe$residual$`20`$train
+
+th$rop_severe_stack_rr
+```
+
+## EUGR-HC
+
+```{r EUGR-HC - Check input its range, eval=FALSE, include=FALSE}
+modeval_data_set_ori$survive$baseline$train |>
+  summary()
+
+modeval_data_set$survive$baseline$`20`$train |>
+  summary()
+
+modeval_data_set_ori$eugr_hc$baseline$train |>
+  summary()
+
+modeval_data_set_ori$survive$residual$train |>
+  filter(t == 28) |>
+  summary()
+
+modeval_data_set_ori$eugr_hc$residual$train |>
+  filter(t == 28) |>
+  summary()
+```
+
+```{r EUGR-HC - Check models and inputs, eval=FALSE, include=FALSE}
+model_stacks
+
+eval_intermediate_list
+
+modeval_data_set_ori$survive$baseline$train |>
+  dep_reduce_dim_pca(
+    dr_model$survive$baseline$`20`
+    , "survive", "baseline", "20"
+  )
+
+modeval_data_set$survive$baseline$`20`$train
+
+modeval_data_set$eugr_hc$baseline$`20`$train
+
+modeval_data_set_ori$survive$residual$train |>
+  dep_reduce_dim_pca(
+    dr_model$survive$residual$`200`
+    , "survive", "residual", "200"
+  ) |>
+  mutate(prior = NA) |>
+  select(id, prior, everything())
+
+modeval_data_set$survive$residual$`200`$train
+
+modeval_data_set_ori$eugr_hc$residual$train |>
+  mutate(prior = NA) |>
+  select(id, prior, everything())
+
+modeval_data_set$eugr_hc$residual$`20`$train
+
+th$eugr_hc_stack_rr
+```
+
+## Failed hearing test
+
+```{r Failed hearing test - Check input its range, eval=FALSE, include=FALSE}
+modeval_data_set_ori$survive$baseline$train |>
+  summary()
+
+modeval_data_set$survive$baseline$`20`$train |>
+  summary()
+
+modeval_data_set_ori$survive$residual$train |>
+  filter(t == 42) |>
+  summary()
+
+modeval_data_set_ori$hearing$residual$train |>
+  filter(t == 42) |>
+  summary()
+```
+
+```{r Failed hearing test - Check models and inputs, eval=FALSE, include=FALSE}
+model_stacks
+
+eval_intermediate_list
+
+modeval_data_set_ori$survive$baseline$train |>
+  dep_reduce_dim_pca(
+    dr_model$survive$baseline$`20`
+    , "survive", "baseline", "20"
+  )
+
+modeval_data_set$survive$baseline$`20`$train
+
+modeval_data_set_ori$survive$residual$train |>
+  dep_reduce_dim_pca(
+    dr_model$survive$residual$`200`
+    , "survive", "residual", "200"
+  ) |>
+  mutate(prior = NA) |>
+  select(id, prior, everything())
+
+modeval_data_set$survive$residual$`200`$train
+
+modeval_data_set$hearing$residual$`20`$train
+
+th$hearing_stack_rr
+```
 
 
 

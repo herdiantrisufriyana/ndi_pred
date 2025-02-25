@@ -3,7 +3,7 @@ obtain_obs_pred <-
       prefix
       , data_dir
       , model_dir
-      , set = c("train", "validation", "test")
+      , set = c("train", "validation", "test", "independent_test")
       , task = "classification"
     ){
     `names<-`(set, set) |>

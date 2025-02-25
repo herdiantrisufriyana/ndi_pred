@@ -1,20 +1,34 @@
 reduce_dim_pca <-
   function(data, pca_model, outcome_name, type_name, min_epv_name, set){
-    new_dim_df <-
-      pca_model[[outcome_name]][[type_name]][[min_epv_name]] |>
-      predict(
-        newdata =
-          data[[outcome_name]][[type_name]][[min_epv_name]][[set]] |>
-          select_if(
-            !colnames(data[[outcome_name]][[type_name]][[min_epv_name]][[set]])
-            %in% c("id", "t", "outcome")
-          ) |>
-          scale(
+    newdata <-
+      data[[outcome_name]][[type_name]][[min_epv_name]][[set]] |>
+      select_if(
+        !colnames(data[[outcome_name]][[type_name]][[min_epv_name]][[set]])
+        %in% c("id", "t", "outcome")
+      ) |>
+      mutate(seq = seq(n())) |>
+      gather(variable, value, -seq) |>
+      left_join(
+        data.frame(
             center =
               pca_model[[outcome_name]][[type_name]][[min_epv_name]]$center
             , scale =
               pca_model[[outcome_name]][[type_name]][[min_epv_name]]$scale
-          )
+          ) |>
+          rownames_to_column(var = "variable")
+        , by = join_by(variable)
+      ) |>
+      mutate(value_scaled = (value - center) / scale) |>
+      select(-value, -center, -scale) |>
+      mutate(variable = factor(variable, unique(variable))) |>
+      spread(variable, value_scaled) |>
+      arrange(seq) |>
+      select(-seq)
+    
+    new_dim_df <-
+      as.data.frame(
+        as.matrix(newdata)
+        %*% pca_model[[outcome_name]][[type_name]][[min_epv_name]]$rotation
       ) |>
       as.data.frame() |>
       select(

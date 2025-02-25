@@ -62,6 +62,8 @@ RUN R -e "BiocManager::install('tidyverse', ask=FALSE, update=FALSE, force=TRUE)
 RUN R -e "BiocManager::install('kableExtra', ask=FALSE, update=FALSE, force=TRUE)"
 RUN R -e "BiocManager::install('ggpubr', ask=FALSE, update=FALSE, force=TRUE)"
 RUN R -e "BiocManager::install('dslabs', ask=FALSE, update=FALSE, force=TRUE)"
+
+# Install additional Python libraries and R packages, chronologically
 RUN R -e "BiocManager::install('igraph', ask=FALSE, update=FALSE, force=TRUE)"
 RUN R -e "BiocManager::install('ggnetwork', ask=FALSE, update=FALSE, force=TRUE)"
 RUN R -e "BiocManager::install('brms', ask=FALSE, update=FALSE, force=TRUE)"
@@ -69,6 +71,7 @@ RUN R -e "BiocManager::install('broom.mixed', ask=FALSE, update=FALSE, force=TRU
 RUN R -e "BiocManager::install('pbapply', ask=FALSE, update=FALSE, force=TRUE)"
 RUN R -e "BiocManager::install('mice', ask=FALSE, update=FALSE, force=TRUE)"
 RUN R -e "BiocManager::install('doParallel', ask=FALSE, update=FALSE, force=TRUE)"
+RUN /opt/conda/bin/conda install -y shap=0.42.1
 
 # Set the working directory to ~/project on R session start
 RUN echo 'setwd("~/project")' >> /home/rstudio/.Rprofile
