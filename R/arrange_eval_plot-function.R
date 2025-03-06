@@ -39,7 +39,7 @@ arrange_eval_plot <-
       , nrow = 2
       , ncol = 1
       , heights = c(4, shap_height)
-      , labels = c(NULL, LETTERS[4])
+      , labels = c("", LETTERS[4])
     )
     
   }
