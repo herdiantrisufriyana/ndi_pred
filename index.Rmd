@@ -2625,8 +2625,9 @@ multivar_reg <-
   reduce(rbind)
 ```
 
-```{r table-15, echo=FALSE}
-multivar_reg  |>
+```{r Compile multivariate regression results, include=FALSE}
+multivar_reg_compiled <-
+  multivar_reg  |>
   filter(term != "(Intercept)") |>
   inner_join(
     univar_reg |>
@@ -2658,7 +2659,11 @@ multivar_reg  |>
     p.value =
       ifelse(p.value<0.001, "<0.001", round(p.value,3)) |>
       as.character()
-  ) |>
+  )
+```
+
+```{r table-15, echo=FALSE}
+multivar_reg_compiled |>
   kable(
     caption = "Table 15. Multivariate regression analysis."
     , format = kable_format
@@ -3400,6 +3405,25 @@ survive_baseline1_rr <-
   )
 ```
 
+```{r Survival prediction - Baseline 1 evaluation, include=FALSE}
+survive_baseline1_eval_df_list <-
+  list(
+    survive_baseline1_rr = survive_baseline1_rr
+  )
+
+survive_baseline1_eval_discrimination <-
+  survive_baseline1_eval_df_list |>
+  lapply(\(x) lapply(lapply(x, select, -id), discrimination, seed = seed))
+
+survive_baseline1_eval_discrimination |>
+  saveRDS("data/survive_baseline1_eval_discrimination.rds")
+```
+
+```{r Survival prediction - Load baseline 1 pre-evaluation, include=FALSE}
+survive_baseline1_eval_discrimination <-
+  readRDS("data/survive_baseline1_eval_discrimination.rds")
+```
+
 ```{r Survival prediction - Write stack, eval=FALSE, include=FALSE}
 seq(nrow(filter(model_stacks, outcome == "survive" & type == "residual"))) |>
   lapply(
@@ -3494,6 +3518,9 @@ survive_stack_eval_calibration <-
   survive_stack_eval_df_list |>
   lapply(\(x) lapply(x, calibration, seed = seed))
 
+survive_stack_eval_calibration |>
+  saveRDS("data/survive_stack_eval_calibration.rds")
+
 survive_stack_eval_discrimination <-
   survive_stack_eval_df_list[
     survive_stack_eval_calibration |>
@@ -3502,9 +3529,125 @@ survive_stack_eval_discrimination <-
   lapply(\(x) lapply(lapply(x, select, -id), discrimination, seed = seed))
 
 survive_stack_eval_discrimination |>
+  saveRDS("data/survive_stack_eval_discrimination.rds")
+```
+
+```{r Survival prediction - Load stack pre-evaluation, include=FALSE}
+survive_stack_eval_calibration <-
+  readRDS("data/survive_stack_eval_calibration.rds")
+survive_stack_eval_discrimination <-
+  readRDS("data/survive_stack_eval_discrimination.rds")
+```
+
+Best model:
+
+```{r Survival prediction - Show stack evaluation, echo=FALSE}
+survive_stack_eval_discrimination |>
   select_best_auroc_lb_model() |>
   cat()
 ```
+
+```{r Survival prediction - Stack calibration plots, include=FALSE}
+survive_stack_eval_calibration_plot <-
+  survive_stack_eval_calibration |>
+  lapply(\(x) x$validation) |>
+  lapply(arrange_calib_plot)
+```
+
+```{r Create figure-6, include=FALSE}
+figure6 <-
+  ggarrange(
+    survive_stack_eval_calibration_plot$survive_stack_rr
+    , survive_stack_eval_calibration_plot$survive_stack_rf
+    , survive_stack_eval_calibration_plot$survive_stack_gbm
+    , survive_stack_eval_calibration_plot$survive_stack_dnn
+    , nrow = 1, ncol = 4
+    , widths = c(5, 5, 5, 5)
+    , labels = LETTERS[1:4]
+  )
+```
+
+```{r figure-6, echo=FALSE, fig.height=6, fig.width=20}
+figure6
+```
+
+Figure 6. Survival stack prediction model calibration plots using validation set: (A) RR; (B) RF; (C) GBM; and (D) DNN. Vertical dashed lines indicate the standard threshold.
+
+```{r Survival prediction - Stack ROC curves, include=FALSE}
+survive_stack_eval_discrimination_plot <-
+  list(
+    plot =
+      list(
+        data =
+          survive_stack_eval_discrimination |>
+          imap(
+            ~ .x$validation$plot$data |>
+              mutate(model = str_to_upper(str_remove_all(.y, "survive_stack_")))
+          ) |>
+          reduce(rbind)
+      )
+  ) |>
+  arrange_disc_plot(multiple = TRUE)
+```
+
+```{r Survival prediction - Stack DCAs, eval=FALSE, include=FALSE}
+survive_stack_eval_decision <-
+  survive_stack_eval_df_list[
+    survive_stack_eval_calibration |>
+      select_well_calibrated_model()
+  ] |>
+  lapply(\(x) lapply(lapply(x, select, -id), decision, seed = seed))
+
+survive_stack_eval_decision |>
+  saveRDS("data/survive_stack_eval_decision.rds")
+```
+
+```{r Survival prediction - Stack pre-DCAs, include=FALSE}
+survive_stack_eval_decision <-
+  readRDS("data/survive_stack_eval_decision.rds")
+```
+
+```{r Survival prediction - Stack decision curves, include=FALSE}
+survive_stack_eval_decision_plot <-
+  list(
+    plot =
+      list(
+        data =
+          survive_stack_eval_decision |>
+          imap(
+            ~ .x$validation$plot$data |>
+              mutate(model = str_to_upper(str_remove_all(.y, "survive_stack_")))
+          ) |>
+          reduce(rbind)
+      )
+    , prevalence =
+          survive_stack_eval_decision |>
+          sapply(\(x) x$validation$prevalence) |>
+          max()
+  ) |>
+  arrange_dec_plot(
+    dc_xby = 0.1, dc_yby = 0.1
+    , dc_ta_angle = -45
+    , multiple = TRUE
+  )
+```
+
+```{r Create figure-7, include=FALSE}
+figure7 <-
+  ggarrange(
+    survive_stack_eval_decision_plot + theme(legend.position = "none")
+    , survive_stack_eval_discrimination_plot
+    , nrow = 1, ncol = 2
+    , widths = c(4, 5)
+    , labels = LETTERS[1:2]
+  )
+```
+
+```{r figure-7, echo=FALSE, fig.height=4, fig.width=9}
+figure7
+```
+
+Figure 7. Survival stack prediction model decision and ROC curves using validation set. DNN, deep neural network; ROC, receiver operating characteristics; RR, ridge regression.
 
 ```{r Survival prediction - Required features, include=FALSE}
 dr_before_modeling_desc$survive_baseline1_rr <-
@@ -3624,6 +3767,9 @@ rop_severe_stack_eval_calibration <-
   rop_severe_stack_eval_df_list |>
   lapply(\(x) lapply(x, calibration, seed = seed))
 
+rop_severe_stack_eval_calibration |>
+  saveRDS("data/rop_severe_stack_eval_calibration.rds")
+
 rop_severe_stack_eval_discrimination <-
   rop_severe_stack_eval_df_list[
     rop_severe_stack_eval_calibration |>
@@ -3632,9 +3778,126 @@ rop_severe_stack_eval_discrimination <-
   lapply(\(x) lapply(lapply(x, select, -id), discrimination, seed = seed))
 
 rop_severe_stack_eval_discrimination |>
+  saveRDS("data/rop_severe_stack_eval_discrimination.rds")
+```
+
+```{r Severe ROP prediction - Load stack pre-evaluation, include=FALSE}
+rop_severe_stack_eval_calibration <-
+  readRDS("data/rop_severe_stack_eval_calibration.rds")
+rop_severe_stack_eval_discrimination <-
+  readRDS("data/rop_severe_stack_eval_discrimination.rds")
+```
+
+Best model:
+
+```{r Severe ROP prediction - Show stack evaluation, echo=FALSE}
+rop_severe_stack_eval_discrimination |>
   select_best_auroc_lb_model() |>
   cat()
 ```
+
+```{r Severe ROP prediction - Stack calibration plots, include=FALSE}
+rop_severe_stack_eval_calibration_plot <-
+  rop_severe_stack_eval_calibration |>
+  lapply(\(x) x$validation) |>
+  lapply(arrange_calib_plot)
+```
+
+```{r Create figure-8, include=FALSE}
+figure8 <-
+  ggarrange(
+    rop_severe_stack_eval_calibration_plot$rop_severe_stack_rr
+    , rop_severe_stack_eval_calibration_plot$rop_severe_stack_rf
+    , rop_severe_stack_eval_calibration_plot$rop_severe_stack_gbm
+    , rop_severe_stack_eval_calibration_plot$rop_severe_stack_dnn
+    , nrow = 1, ncol = 4
+    , widths = c(5, 5, 5, 5)
+    , labels = LETTERS[1:4]
+  )
+```
+
+```{r figure-8, echo=FALSE, fig.height=6, fig.width=20}
+figure8
+```
+
+Figure 8. Severe ROP stack prediction model calibration plots using validation set: (A) RR; (B) RF; (C) GBM; and (D) DNN. Vertical dashed lines indicate the standard threshold.
+
+```{r Severe ROP prediction - Stack ROC curves, include=FALSE}
+rop_severe_stack_eval_discrimination_plot <-
+  list(
+    plot =
+      list(
+        data =
+          rop_severe_stack_eval_discrimination |>
+          imap(
+            ~ .x$validation$plot$data |>
+              mutate(model = str_to_upper(str_remove_all(.y, "rop_severe_stack_")))
+          ) |>
+          reduce(rbind)
+      )
+  ) |>
+  arrange_disc_plot(multiple = TRUE)
+```
+
+```{r Severe ROP prediction - Stack DCAs, eval=FALSE, include=FALSE}
+rop_severe_stack_eval_decision <-
+  rop_severe_stack_eval_df_list[
+    rop_severe_stack_eval_calibration |>
+      select_well_calibrated_model()
+  ] |>
+  lapply(\(x) lapply(lapply(x, select, -id), decision, seed = seed))
+
+rop_severe_stack_eval_decision |>
+  saveRDS("data/rop_severe_stack_eval_decision.rds")
+```
+
+```{r Severe ROP prediction - Stack pre-DCAs, include=FALSE}
+rop_severe_stack_eval_decision <-
+  readRDS("data/rop_severe_stack_eval_decision.rds")
+```
+
+```{r Severe ROP prediction - Stack decision curves, include=FALSE}
+rop_severe_stack_eval_decision_plot <-
+  list(
+    plot =
+      list(
+        data =
+          rop_severe_stack_eval_decision |>
+          imap(
+            ~ .x$validation$plot$data |>
+              mutate(model = str_to_upper(str_remove_all(.y, "rop_severe_stack_")))
+          ) |>
+          reduce(rbind)
+      )
+    , prevalence =
+          rop_severe_stack_eval_decision |>
+          sapply(\(x) x$validation$prevalence) |>
+          max()
+  ) |>
+  arrange_dec_plot(
+    dc_xmax = 0.6, dc_xby = 0.1
+    , dc_ymax = 0.15, dc_yby = 0.01
+    , dc_ta_angle = -80
+    , multiple = TRUE
+  )
+```
+
+```{r Create figure-9, include=FALSE}
+figure9 <-
+  ggarrange(
+    rop_severe_stack_eval_decision_plot + theme(legend.position = "none")
+    , rop_severe_stack_eval_discrimination_plot
+    , nrow = 1, ncol = 2
+    , widths = c(4, 5)
+    , labels = LETTERS[1:2]
+  )
+```
+
+```{r figure-9, echo=FALSE, fig.height=4, fig.width=9}
+figure9
+```
+
+Figure 9. Severe ROP stack prediction model decision and ROC curves using validation set. DNN, deep neural network; GBM, gradient boosting machine; RF, random forest; ROC, receiver operating characteristics; RR, ridge regression.
 
 ```{r Severe ROP prediction - Required features, include=FALSE}
 dr_before_modeling_desc$rop_severe_stack_rr <-
@@ -3754,6 +4017,9 @@ bpd_stack_eval_calibration <-
   bpd_stack_eval_df_list |>
   lapply(\(x) lapply(x, calibration, seed = seed))
 
+bpd_stack_eval_calibration |>
+  saveRDS("data/bpd_stack_eval_calibration.rds")
+
 bpd_stack_eval_discrimination <-
   bpd_stack_eval_df_list[
     bpd_stack_eval_calibration |>
@@ -3762,9 +4028,126 @@ bpd_stack_eval_discrimination <-
   lapply(\(x) lapply(lapply(x, select, -id), discrimination, seed = seed))
 
 bpd_stack_eval_discrimination |>
+  saveRDS("data/bpd_stack_eval_discrimination.rds")
+```
+
+```{r BPD prediction - Load stack pre-evaluation, include=FALSE}
+bpd_stack_eval_calibration <-
+  readRDS("data/bpd_stack_eval_calibration.rds")
+bpd_stack_eval_discrimination <-
+  readRDS("data/bpd_stack_eval_discrimination.rds")
+```
+
+Best model:
+
+```{r BPD prediction - Show stack evaluation, echo=FALSE}
+bpd_stack_eval_discrimination |>
   select_best_auroc_lb_model() |>
   cat()
 ```
+
+```{r BPD prediction - Stack calibration plots, include=FALSE}
+bpd_stack_eval_calibration_plot <-
+  bpd_stack_eval_calibration |>
+  lapply(\(x) x$validation) |>
+  lapply(arrange_calib_plot)
+```
+
+```{r Create figure-10, include=FALSE}
+figure10 <-
+  ggarrange(
+    bpd_stack_eval_calibration_plot$bpd_stack_rr
+    , bpd_stack_eval_calibration_plot$bpd_stack_rf
+    , bpd_stack_eval_calibration_plot$bpd_stack_gbm
+    , bpd_stack_eval_calibration_plot$bpd_stack_dnn
+    , nrow = 1, ncol = 4
+    , widths = c(5, 5, 5, 5)
+    , labels = LETTERS[1:4]
+  )
+```
+
+```{r figure-10, echo=FALSE, fig.height=6, fig.width=20}
+figure10
+```
+
+Figure 10. BPD stack prediction model calibration plots using validation set: (A) RR; (B) RF; (C) GBM; and (D) DNN. Vertical dashed lines indicate the standard threshold.
+
+```{r BPD prediction - Stack ROC curves, include=FALSE}
+bpd_stack_eval_discrimination_plot <-
+  list(
+    plot =
+      list(
+        data =
+          bpd_stack_eval_discrimination |>
+          imap(
+            ~ .x$validation$plot$data |>
+              mutate(model = str_to_upper(str_remove_all(.y, "bpd_stack_")))
+          ) |>
+          reduce(rbind)
+      )
+  ) |>
+  arrange_disc_plot(multiple = TRUE)
+```
+
+```{r BPD prediction - Stack DCAs, eval=FALSE, include=FALSE}
+bpd_stack_eval_decision <-
+  bpd_stack_eval_df_list[
+    bpd_stack_eval_calibration |>
+      select_well_calibrated_model()
+  ] |>
+  lapply(\(x) lapply(lapply(x, select, -id), decision, seed = seed))
+
+bpd_stack_eval_decision |>
+  saveRDS("data/bpd_stack_eval_decision.rds")
+```
+
+```{r BPD prediction - Stack pre-DCAs, include=FALSE}
+bpd_stack_eval_decision <-
+  readRDS("data/bpd_stack_eval_decision.rds")
+```
+
+```{r BPD prediction - Stack decision curves, include=FALSE}
+bpd_stack_eval_decision_plot <-
+  list(
+    plot =
+      list(
+        data =
+          bpd_stack_eval_decision |>
+          imap(
+            ~ .x$validation$plot$data |>
+              mutate(model = str_to_upper(str_remove_all(.y, "bpd_stack_")))
+          ) |>
+          reduce(rbind)
+      )
+    , prevalence =
+          bpd_stack_eval_decision |>
+          sapply(\(x) x$validation$prevalence) |>
+          max()
+  ) |>
+  arrange_dec_plot(
+    dc_xmax = 0.6, dc_xby = 0.1
+    , dc_ymax = 0.35, dc_yby = 0.05
+    , dc_ta_angle = -70
+    , multiple = TRUE
+  )
+```
+
+```{r Create figure-11, include=FALSE}
+figure11 <-
+  ggarrange(
+    bpd_stack_eval_decision_plot + theme(legend.position = "none")
+    , bpd_stack_eval_discrimination_plot
+    , nrow = 1, ncol = 2
+    , widths = c(4, 5)
+    , labels = LETTERS[1:2]
+  )
+```
+
+```{r figure-11, echo=FALSE, fig.height=4, fig.width=9}
+figure11
+```
+
+Figure 11. BPD stack prediction model decision and ROC curves using validation set. DNN, deep neural network; GBM, gradient boosting machine; RF, random forest; ROC, receiver operating characteristics.
 
 ```{r BPD prediction - Required features, include=FALSE}
 dr_before_modeling_desc$bpd_stack_rf <-
@@ -3892,6 +4275,9 @@ bpd_moderate_severe_stack_eval_calibration <-
   bpd_moderate_severe_stack_eval_df_list |>
   lapply(\(x) lapply(x, calibration, seed = seed))
 
+bpd_moderate_severe_stack_eval_calibration |>
+  saveRDS("data/bpd_moderate_severe_stack_eval_calibration.rds")
+
 bpd_moderate_severe_stack_eval_discrimination <-
   bpd_moderate_severe_stack_eval_df_list[
     bpd_moderate_severe_stack_eval_calibration |>
@@ -3900,9 +4286,132 @@ bpd_moderate_severe_stack_eval_discrimination <-
   lapply(\(x) lapply(lapply(x, select, -id), discrimination, seed = seed))
 
 bpd_moderate_severe_stack_eval_discrimination |>
+  saveRDS("data/bpd_moderate_severe_stack_eval_discrimination.rds")
+```
+
+```{r Mod/sev BPD prediction - Load stack pre-evaluation, include=FALSE}
+bpd_moderate_severe_stack_eval_calibration <-
+  readRDS("data/bpd_moderate_severe_stack_eval_calibration.rds")
+bpd_moderate_severe_stack_eval_discrimination <-
+  readRDS("data/bpd_moderate_severe_stack_eval_discrimination.rds")
+```
+
+Best model:
+
+```{r Mod/sev BPD prediction - Show stack evaluation, echo=FALSE}
+bpd_moderate_severe_stack_eval_discrimination |>
   select_best_auroc_lb_model() |>
   cat()
 ```
+
+```{r Mod/sev BPD prediction - Stack calibration plots, include=FALSE}
+bpd_moderate_severe_stack_eval_calibration_plot <-
+  bpd_moderate_severe_stack_eval_calibration |>
+  lapply(\(x) x$validation) |>
+  lapply(arrange_calib_plot)
+```
+
+```{r Create figure-12, include=FALSE}
+figure12 <-
+  ggarrange(
+    bpd_moderate_severe_stack_eval_calibration_plot$bpd_moderate_severe_stack_rr
+    , bpd_moderate_severe_stack_eval_calibration_plot$bpd_moderate_severe_stack_rf
+    , bpd_moderate_severe_stack_eval_calibration_plot$bpd_moderate_severe_stack_gbm
+    , bpd_moderate_severe_stack_eval_calibration_plot$bpd_moderate_severe_stack_dnn
+    , nrow = 1, ncol = 4
+    , widths = c(5, 5, 5, 5)
+    , labels = LETTERS[1:4]
+  )
+```
+
+```{r figure-12, echo=FALSE, fig.height=6, fig.width=20}
+figure12
+```
+
+Figure 12. Moderate/severe BPD stack prediction model calibration plots using validation set: (A) RR; (B) RF; (C) GBM; and (D) DNN. Vertical dashed lines indicate the standard threshold.
+
+```{r Mod/sev BPD prediction - Stack ROC curves, include=FALSE}
+bpd_moderate_severe_stack_eval_discrimination_plot <-
+  list(
+    plot =
+      list(
+        data =
+          bpd_moderate_severe_stack_eval_discrimination |>
+          imap(
+            ~ .x$validation$plot$data |>
+              mutate(
+                model =
+                  str_to_upper(str_remove_all(.y, "bpd_moderate_severe_stack_"))
+              )
+          ) |>
+          reduce(rbind)
+      )
+  ) |>
+  arrange_disc_plot(multiple = TRUE)
+```
+
+```{r Mod/sev BPD prediction - Stack DCAs, eval=FALSE, include=FALSE}
+bpd_moderate_severe_stack_eval_decision <-
+  bpd_moderate_severe_stack_eval_df_list[
+    bpd_moderate_severe_stack_eval_calibration |>
+      select_well_calibrated_model()
+  ] |>
+  lapply(\(x) lapply(lapply(x, select, -id), decision, seed = seed))
+
+bpd_moderate_severe_stack_eval_decision |>
+  saveRDS("data/bpd_moderate_severe_stack_eval_decision.rds")
+```
+
+```{r Mod/sev BPD prediction - Stack pre-DCAs, include=FALSE}
+bpd_moderate_severe_stack_eval_decision <-
+  readRDS("data/bpd_moderate_severe_stack_eval_decision.rds")
+```
+
+```{r Mod/sev BPD prediction - Stack decision curves, include=FALSE}
+bpd_moderate_severe_stack_eval_decision_plot <-
+  list(
+    plot =
+      list(
+        data =
+          bpd_moderate_severe_stack_eval_decision |>
+          imap(
+            ~ .x$validation$plot$data |>
+              mutate(
+                model =
+                  str_to_upper(str_remove_all(.y, "bpd_moderate_severe_stack_"))
+              )
+          ) |>
+          reduce(rbind)
+      )
+    , prevalence =
+          bpd_moderate_severe_stack_eval_decision |>
+          sapply(\(x) x$validation$prevalence) |>
+          max()
+  ) |>
+  arrange_dec_plot(
+    dc_xmax = 0.6, dc_xby = 0.1
+    , dc_ymax = 0.35, dc_yby = 0.05
+    , dc_ta_angle = -70
+    , multiple = TRUE
+  )
+```
+
+```{r Create figure-13, include=FALSE}
+figure13 <-
+  ggarrange(
+    bpd_moderate_severe_stack_eval_decision_plot + theme(legend.position = "none")
+    , bpd_moderate_severe_stack_eval_discrimination_plot
+    , nrow = 1, ncol = 2
+    , widths = c(4, 5)
+    , labels = LETTERS[1:2]
+  )
+```
+
+```{r figure-13, echo=FALSE, fig.height=4, fig.width=9}
+figure13
+```
+
+Figure 13. Mod/sev BPD stack prediction model decision and ROC curves using validation set. DNN, deep neural network; GBM, gradient boosting machine; RF, random forest; ROC, receiver operating characteristics; RR, ridge regression.
 
 ```{r Mod/sev BPD prediction - Required features, include=FALSE}
 dr_before_modeling_desc$bpd_moderate_severe_stack_rf <-
@@ -3987,6 +4496,25 @@ eugr_hc_baseline2_rr <-
     , data_dir = "inst/extdata/modeval_data_set/"
     , model_dir = "inst/extdata/model/"
   )
+```
+
+```{r EUGR-HC prediction - Baseline 1 evaluation, eval=FALSE, include=FALSE}
+eugr_hc_baseline2_eval_df_list <-
+  list(
+    eugr_hc_baseline2_rr = eugr_hc_baseline2_rr
+  )
+
+eugr_hc_baseline2_eval_discrimination <-
+  eugr_hc_baseline2_eval_df_list |>
+  lapply(\(x) lapply(lapply(x, select, -id), discrimination, seed = seed))
+
+eugr_hc_baseline2_eval_discrimination |>
+  saveRDS("data/eugr_hc_baseline2_eval_discrimination.rds")
+```
+
+```{r EUGR-HC prediction - Load baseline2 pre-evaluation, include=FALSE}
+eugr_hc_baseline2_eval_discrimination <-
+  readRDS("data/eugr_hc_baseline2_eval_discrimination.rds")
 ```
 
 ```{r EUGR-HC prediction - Write stack 1, eval=FALSE, include=FALSE}
@@ -4106,6 +4634,9 @@ eugr_hc_stack1_eval_calibration <-
   eugr_hc_stack1_eval_df_list |>
   lapply(\(x) lapply(x, calibration, seed = seed))
 
+eugr_hc_stack1_eval_calibration |>
+  saveRDS("data/eugr_hc_stack1_eval_calibration.rds")
+
 eugr_hc_stack1_eval_discrimination <-
   eugr_hc_stack1_eval_df_list[
     eugr_hc_stack1_eval_calibration |>
@@ -4114,9 +4645,132 @@ eugr_hc_stack1_eval_discrimination <-
   lapply(\(x) lapply(lapply(x, select, -id), discrimination, seed = seed))
 
 eugr_hc_stack1_eval_discrimination |>
+  saveRDS("data/eugr_hc_stack1_eval_discrimination.rds")
+```
+
+```{r EUGR-HC prediction - Load stack1 pre-evaluation, include=FALSE}
+eugr_hc_stack1_eval_calibration <-
+  readRDS("data/eugr_hc_stack1_eval_calibration.rds")
+eugr_hc_stack1_eval_discrimination <-
+  readRDS("data/eugr_hc_stack1_eval_discrimination.rds")
+```
+
+Best model:
+
+```{r EUGR-HC prediction - Show stack1 evaluation, echo=FALSE}
+eugr_hc_stack1_eval_discrimination |>
   select_best_auroc_lb_model() |>
   cat()
 ```
+
+```{r EUGR-HC prediction - Stack1 calibration plots, include=FALSE}
+eugr_hc_stack1_eval_calibration_plot <-
+  eugr_hc_stack1_eval_calibration |>
+  lapply(\(x) x$validation) |>
+  lapply(arrange_calib_plot)
+```
+
+```{r Create figure-14, include=FALSE}
+figure14 <-
+  ggarrange(
+    eugr_hc_stack1_eval_calibration_plot$eugr_hc_stack1_rr
+    , eugr_hc_stack1_eval_calibration_plot$eugr_hc_stack1_rf
+    , eugr_hc_stack1_eval_calibration_plot$eugr_hc_stack1_gbm
+    , eugr_hc_stack1_eval_calibration_plot$eugr_hc_stack1_dnn
+    , nrow = 1, ncol = 4
+    , widths = c(5, 5, 5, 5)
+    , labels = LETTERS[1:4]
+  )
+```
+
+```{r figure-14, echo=FALSE, fig.height=6, fig.width=20}
+figure14
+```
+
+Figure 14. EUGR-HC stack1 prediction model calibration plots using validation set: (A) RR; (B) RF; (C) GBM; and (D) DNN. Vertical dashed lines indicate the standard threshold.
+
+```{r EUGR-HC prediction - Stack1 ROC curves, include=FALSE}
+eugr_hc_stack1_eval_discrimination_plot <-
+  list(
+    plot =
+      list(
+        data =
+          eugr_hc_stack1_eval_discrimination |>
+          imap(
+            ~ .x$validation$plot$data |>
+              mutate(
+                model =
+                  str_to_upper(str_remove_all(.y, "eugr_hc_stack1_"))
+              )
+          ) |>
+          reduce(rbind)
+      )
+  ) |>
+  arrange_disc_plot(multiple = TRUE)
+```
+
+```{r EUGR-HC prediction - Stack1 DCAs, eval=FALSE, include=FALSE}
+eugr_hc_stack1_eval_decision <-
+  eugr_hc_stack1_eval_df_list[
+    eugr_hc_stack1_eval_calibration |>
+      select_well_calibrated_model()
+  ] |>
+  lapply(\(x) lapply(lapply(x, select, -id), decision, seed = seed))
+
+eugr_hc_stack1_eval_decision |>
+  saveRDS("data/eugr_hc_stack1_eval_decision.rds")
+```
+
+```{r EUGR-HC prediction - Stack1 pre-DCAs, include=FALSE}
+eugr_hc_stack1_eval_decision <-
+  readRDS("data/eugr_hc_stack1_eval_decision.rds")
+```
+
+```{r EUGR-HC prediction - Stack1 decision curves, include=FALSE}
+eugr_hc_stack1_eval_decision_plot <-
+  list(
+    plot =
+      list(
+        data =
+          eugr_hc_stack1_eval_decision |>
+          imap(
+            ~ .x$validation$plot$data |>
+              mutate(
+                model =
+                  str_to_upper(str_remove_all(.y, "eugr_hc_stack1_"))
+              )
+          ) |>
+          reduce(rbind)
+      )
+    , prevalence =
+          eugr_hc_stack1_eval_decision |>
+          sapply(\(x) x$validation$prevalence) |>
+          max()
+  ) |>
+  arrange_dec_plot(
+    dc_xmax = 0.6, dc_xby = 0.1
+    , dc_ymax = 0.3, dc_yby = 0.05
+    , dc_ta_angle = -75
+    , multiple = TRUE
+  )
+```
+
+```{r Create figure-15, include=FALSE}
+figure15 <-
+  ggarrange(
+    eugr_hc_stack1_eval_decision_plot + theme(legend.position = "none")
+    , eugr_hc_stack1_eval_discrimination_plot
+    , nrow = 1, ncol = 2
+    , widths = c(4, 5)
+    , labels = LETTERS[1:2]
+  )
+```
+
+```{r figure-15, echo=FALSE, fig.height=4, fig.width=9}
+figure15
+```
+
+Figure 15. EUGR-HC stack1 prediction model decision and ROC curves using validation set. DNN, deep neural network; GBM, gradient boosting machine; RF, random forest; ROC, receiver operating characteristics.
 
 ```{r EUGR-HC prediction - Write stack, eval=FALSE, include=FALSE}
 seq(nrow(filter(model_stacks, outcome == "eugr_hc" & type == "residual"))) |>
@@ -4212,6 +4866,9 @@ eugr_hc_stack_eval_calibration <-
   eugr_hc_stack_eval_df_list |>
   lapply(\(x) lapply(x, calibration, seed = seed))
 
+eugr_hc_stack_eval_calibration |>
+  saveRDS("data/eugr_hc_stack_eval_calibration.rds")
+
 eugr_hc_stack_eval_discrimination <-
   eugr_hc_stack_eval_df_list[
     eugr_hc_stack_eval_calibration |>
@@ -4220,9 +4877,132 @@ eugr_hc_stack_eval_discrimination <-
   lapply(\(x) lapply(lapply(x, select, -id), discrimination, seed = seed))
 
 eugr_hc_stack_eval_discrimination |>
+  saveRDS("data/eugr_hc_stack_eval_discrimination.rds")
+```
+
+```{r EUGR-HC prediction - Load stack pre-evaluation, include=FALSE}
+eugr_hc_stack_eval_calibration <-
+  readRDS("data/eugr_hc_stack_eval_calibration.rds")
+eugr_hc_stack_eval_discrimination <-
+  readRDS("data/eugr_hc_stack_eval_discrimination.rds")
+```
+
+Best model:
+
+```{r EUGR-HC prediction - Show stack evaluation, echo=FALSE}
+eugr_hc_stack_eval_discrimination |>
   select_best_auroc_lb_model() |>
   cat()
 ```
+
+```{r EUGR-HC prediction - Stack calibration plots, include=FALSE}
+eugr_hc_stack_eval_calibration_plot <-
+  eugr_hc_stack_eval_calibration |>
+  lapply(\(x) x$validation) |>
+  lapply(arrange_calib_plot)
+```
+
+```{r Create figure-16, include=FALSE}
+figure16 <-
+  ggarrange(
+    eugr_hc_stack_eval_calibration_plot$eugr_hc_stack_rr
+    , eugr_hc_stack_eval_calibration_plot$eugr_hc_stack_rf
+    , eugr_hc_stack_eval_calibration_plot$eugr_hc_stack_gbm
+    , eugr_hc_stack_eval_calibration_plot$eugr_hc_stack_dnn
+    , nrow = 1, ncol = 4
+    , widths = c(5, 5, 5, 5)
+    , labels = LETTERS[1:4]
+  )
+```
+
+```{r figure-16, echo=FALSE, fig.height=6, fig.width=20}
+figure16
+```
+
+Figure 16. EUGR-HC stack prediction model calibration plots using validation set: (A) RR; (B) RF; (C) GBM; and (D) DNN. Vertical dashed lines indicate the standard threshold.
+
+```{r EUGR-HC prediction - Stack ROC curves, include=FALSE}
+eugr_hc_stack_eval_discrimination_plot <-
+  list(
+    plot =
+      list(
+        data =
+          eugr_hc_stack_eval_discrimination |>
+          imap(
+            ~ .x$validation$plot$data |>
+              mutate(
+                model =
+                  str_to_upper(str_remove_all(.y, "eugr_hc_stack_"))
+              )
+          ) |>
+          reduce(rbind)
+      )
+  ) |>
+  arrange_disc_plot(multiple = TRUE)
+```
+
+```{r EUGR-HC prediction - Stack DCAs, eval=FALSE, include=FALSE}
+eugr_hc_stack_eval_decision <-
+  eugr_hc_stack_eval_df_list[
+    eugr_hc_stack_eval_calibration |>
+      select_well_calibrated_model()
+  ] |>
+  lapply(\(x) lapply(lapply(x, select, -id), decision, seed = seed))
+
+eugr_hc_stack_eval_decision |>
+  saveRDS("data/eugr_hc_stack_eval_decision.rds")
+```
+
+```{r EUGR-HC prediction - Stack pre-DCAs, include=FALSE}
+eugr_hc_stack_eval_decision <-
+  readRDS("data/eugr_hc_stack_eval_decision.rds")
+```
+
+```{r EUGR-HC prediction - Stack decision curves, include=FALSE}
+eugr_hc_stack_eval_decision_plot <-
+  list(
+    plot =
+      list(
+        data =
+          eugr_hc_stack_eval_decision |>
+          imap(
+            ~ .x$validation$plot$data |>
+              mutate(
+                model =
+                  str_to_upper(str_remove_all(.y, "eugr_hc_stack_"))
+              )
+          ) |>
+          reduce(rbind)
+      )
+    , prevalence =
+          eugr_hc_stack_eval_decision |>
+          sapply(\(x) x$validation$prevalence) |>
+          max()
+  ) |>
+  arrange_dec_plot(
+    dc_xmax = 0.6, dc_xby = 0.1
+    , dc_ymax = 0.3, dc_yby = 0.05
+    , dc_ta_angle = -75
+    , multiple = TRUE
+  )
+```
+
+```{r Create figure-17, include=FALSE}
+figure17 <-
+  ggarrange(
+    eugr_hc_stack_eval_decision_plot + theme(legend.position = "none")
+    , eugr_hc_stack_eval_discrimination_plot
+    , nrow = 1, ncol = 2
+    , widths = c(4, 5)
+    , labels = LETTERS[1:2]
+  )
+```
+
+```{r figure-17, echo=FALSE, fig.height=4, fig.width=9}
+figure17
+```
+
+Figure 17. EUGR-HC stack prediction model decision and ROC curves using validation set. DNN, deep neural network; GBM, gradient boosting machine; RF, random forest; ROC, receiver operating characteristics; RR, ridge regression.
 
 ```{r EUGR-HC prediction - Required features, include=FALSE}
 dr_before_modeling_desc$eugr_hc_baseline2_rr <-
@@ -4313,6 +5093,25 @@ eugr_bw_baseline2_rr <-
     , data_dir = "inst/extdata/modeval_data_set/"
     , model_dir = "inst/extdata/model/"
   )
+```
+
+```{r EUGR-BW prediction - Baseline 1 evaluation, eval=FALSE, include=FALSE}
+eugr_bw_baseline2_eval_df_list <-
+  list(
+    eugr_bw_baseline2_rr = eugr_bw_baseline2_rr
+  )
+
+eugr_bw_baseline2_eval_discrimination <-
+  eugr_bw_baseline2_eval_df_list |>
+  lapply(\(x) lapply(lapply(x, select, -id), discrimination, seed = seed))
+
+eugr_bw_baseline2_eval_discrimination |>
+  saveRDS("data/eugr_bw_baseline2_eval_discrimination.rds")
+```
+
+```{r EUGR-BW prediction - Load baseline2 pre-evaluation, include=FALSE}
+eugr_bw_baseline2_eval_discrimination <-
+  readRDS("data/eugr_bw_baseline2_eval_discrimination.rds")
 ```
 
 ```{r EUGR-BW prediction - Write stack 1, eval=FALSE, include=FALSE}
@@ -4432,6 +5231,9 @@ eugr_bw_stack1_eval_calibration <-
   eugr_bw_stack1_eval_df_list |>
   lapply(\(x) lapply(x, calibration, seed = seed))
 
+eugr_bw_stack1_eval_calibration |>
+  saveRDS("data/eugr_bw_stack1_eval_calibration.rds")
+
 eugr_bw_stack1_eval_discrimination <-
   eugr_bw_stack1_eval_df_list[
     eugr_bw_stack1_eval_calibration |>
@@ -4440,9 +5242,132 @@ eugr_bw_stack1_eval_discrimination <-
   lapply(\(x) lapply(lapply(x, select, -id), discrimination, seed = seed))
 
 eugr_bw_stack1_eval_discrimination |>
+  saveRDS("data/eugr_bw_stack1_eval_discrimination.rds")
+```
+
+```{r EUGR-BW prediction - Load stack1 pre-evaluation, include=FALSE}
+eugr_bw_stack1_eval_calibration <-
+  readRDS("data/eugr_bw_stack1_eval_calibration.rds")
+eugr_bw_stack1_eval_discrimination <-
+  readRDS("data/eugr_bw_stack1_eval_discrimination.rds")
+```
+
+Best model:
+
+```{r EUGR-BW prediction - Show stack1 evaluation, echo=FALSE}
+eugr_bw_stack1_eval_discrimination |>
   select_best_auroc_lb_model() |>
   cat()
 ```
+
+```{r EUGR-BW prediction - Stack1 calibration plots, include=FALSE}
+eugr_bw_stack1_eval_calibration_plot <-
+  eugr_bw_stack1_eval_calibration |>
+  lapply(\(x) x$validation) |>
+  lapply(arrange_calib_plot)
+```
+
+```{r Create figure-18, include=FALSE}
+figure18 <-
+  ggarrange(
+    eugr_bw_stack1_eval_calibration_plot$eugr_bw_stack1_rr
+    , eugr_bw_stack1_eval_calibration_plot$eugr_bw_stack1_rf
+    , eugr_bw_stack1_eval_calibration_plot$eugr_bw_stack1_gbm
+    , eugr_bw_stack1_eval_calibration_plot$eugr_bw_stack1_dnn
+    , nrow = 1, ncol = 4
+    , widths = c(5, 5, 5, 5)
+    , labels = LETTERS[1:4]
+  )
+```
+
+```{r figure-18, echo=FALSE, fig.height=6, fig.width=20}
+figure18
+```
+
+Figure 18. EUGR-BW stack1 prediction model calibration plots using validation set: (A) RR; (B) RF; (C) GBM; and (D) DNN. Vertical dashed lines indicate the standard threshold.
+
+```{r EUGR-BW prediction - Stack1 ROC curves, include=FALSE}
+eugr_bw_stack1_eval_discrimination_plot <-
+  list(
+    plot =
+      list(
+        data =
+          eugr_bw_stack1_eval_discrimination |>
+          imap(
+            ~ .x$validation$plot$data |>
+              mutate(
+                model =
+                  str_to_upper(str_remove_all(.y, "eugr_bw_stack1_"))
+              )
+          ) |>
+          reduce(rbind)
+      )
+  ) |>
+  arrange_disc_plot(multiple = TRUE)
+```
+
+```{r EUGR-BW prediction - Stack1 DCAs, eval=FALSE, include=FALSE}
+eugr_bw_stack1_eval_decision <-
+  eugr_bw_stack1_eval_df_list[
+    eugr_bw_stack1_eval_calibration |>
+      select_well_calibrated_model()
+  ] |>
+  lapply(\(x) lapply(lapply(x, select, -id), decision, seed = seed))
+
+eugr_bw_stack1_eval_decision |>
+  saveRDS("data/eugr_bw_stack1_eval_decision.rds")
+```
+
+```{r EUGR-BW prediction - Stack1 pre-DCAs, include=FALSE}
+eugr_bw_stack1_eval_decision <-
+  readRDS("data/eugr_bw_stack1_eval_decision.rds")
+```
+
+```{r EUGR-BW prediction - Stack1 decision curves, include=FALSE}
+eugr_bw_stack1_eval_decision_plot <-
+  list(
+    plot =
+      list(
+        data =
+          eugr_bw_stack1_eval_decision |>
+          imap(
+            ~ .x$validation$plot$data |>
+              mutate(
+                model =
+                  str_to_upper(str_remove_all(.y, "eugr_bw_stack1_"))
+              )
+          ) |>
+          reduce(rbind)
+      )
+    , prevalence =
+          eugr_bw_stack1_eval_decision |>
+          sapply(\(x) x$validation$prevalence) |>
+          max()
+  ) |>
+  arrange_dec_plot(
+    dc_xmax = 0.6, dc_xby = 0.1
+    , dc_ymax = 0.25, dc_yby = 0.05
+    , dc_ta_angle = -75
+    , multiple = TRUE
+  )
+```
+
+```{r Create figure-19, include=FALSE}
+figure19 <-
+  ggarrange(
+    eugr_bw_stack1_eval_decision_plot + theme(legend.position = "none")
+    , eugr_bw_stack1_eval_discrimination_plot
+    , nrow = 1, ncol = 2
+    , widths = c(4, 5)
+    , labels = LETTERS[1:2]
+  )
+```
+
+```{r figure-19, echo=FALSE, fig.height=4, fig.width=9}
+figure19
+```
+
+Figure 19. EUGR-BW stack1 prediction model decision and ROC curves using validation set. DNN, deep neural network; GBM, gradient boosting machine; RF, random forest; ROC, receiver operating characteristics; RR, ridge regression.
 
 ```{r EUGR-BW prediction - Write stack, eval=FALSE, include=FALSE}
 seq(nrow(filter(model_stacks, outcome == "eugr_bw" & type == "residual"))) |>
@@ -4538,6 +5463,9 @@ eugr_bw_stack_eval_calibration <-
   eugr_bw_stack_eval_df_list |>
   lapply(\(x) lapply(x, calibration, seed = seed))
 
+eugr_bw_stack_eval_calibration |>
+  saveRDS("data/eugr_bw_stack_eval_calibration.rds")
+
 eugr_bw_stack_eval_discrimination <-
   eugr_bw_stack_eval_df_list[
     eugr_bw_stack_eval_calibration |>
@@ -4546,9 +5474,132 @@ eugr_bw_stack_eval_discrimination <-
   lapply(\(x) lapply(lapply(x, select, -id), discrimination, seed = seed))
 
 eugr_bw_stack_eval_discrimination |>
+  saveRDS("data/eugr_bw_stack_eval_discrimination.rds")
+```
+
+```{r EUGR-BW prediction - Load stack pre-evaluation, include=FALSE}
+eugr_bw_stack_eval_calibration <-
+  readRDS("data/eugr_bw_stack_eval_calibration.rds")
+eugr_bw_stack_eval_discrimination <-
+  readRDS("data/eugr_bw_stack_eval_discrimination.rds")
+```
+
+Best model:
+
+```{r EUGR-BW prediction - Show stack evaluation, echo=FALSE}
+eugr_bw_stack_eval_discrimination |>
   select_best_auroc_lb_model() |>
   cat()
 ```
+
+```{r EUGR-BW prediction - Stack calibration plots, include=FALSE}
+eugr_bw_stack_eval_calibration_plot <-
+  eugr_bw_stack_eval_calibration |>
+  lapply(\(x) x$validation) |>
+  lapply(arrange_calib_plot)
+```
+
+```{r Create figure-20, include=FALSE}
+figure20 <-
+  ggarrange(
+    eugr_bw_stack_eval_calibration_plot$eugr_bw_stack_rr
+    , eugr_bw_stack_eval_calibration_plot$eugr_bw_stack_rf
+    , eugr_bw_stack_eval_calibration_plot$eugr_bw_stack_gbm
+    , eugr_bw_stack_eval_calibration_plot$eugr_bw_stack_dnn
+    , nrow = 1, ncol = 4
+    , widths = c(5, 5, 5, 5)
+    , labels = LETTERS[1:4]
+  )
+```
+
+```{r figure-20, echo=FALSE, fig.height=6, fig.width=20}
+figure20
+```
+
+Figure 20. EUGR-BW stack prediction model calibration plots using validation set: (A) RR; (B) RF; (C) GBM; and (D) DNN. Vertical dashed lines indicate the standard threshold.
+
+```{r EUGR-BW prediction - Stack ROC curves, include=FALSE}
+eugr_bw_stack_eval_discrimination_plot <-
+  list(
+    plot =
+      list(
+        data =
+          eugr_bw_stack_eval_discrimination |>
+          imap(
+            ~ .x$validation$plot$data |>
+              mutate(
+                model =
+                  str_to_upper(str_remove_all(.y, "eugr_bw_stack_"))
+              )
+          ) |>
+          reduce(rbind)
+      )
+  ) |>
+  arrange_disc_plot(multiple = TRUE)
+```
+
+```{r EUGR-BW prediction - Stack DCAs, eval=FALSE, include=FALSE}
+eugr_bw_stack_eval_decision <-
+  eugr_bw_stack_eval_df_list[
+    eugr_bw_stack_eval_calibration |>
+      select_well_calibrated_model()
+  ] |>
+  lapply(\(x) lapply(lapply(x, select, -id), decision, seed = seed))
+
+eugr_bw_stack_eval_decision |>
+  saveRDS("data/eugr_bw_stack_eval_decision.rds")
+```
+
+```{r EUGR-BW prediction - Stack pre-DCAs, include=FALSE}
+eugr_bw_stack_eval_decision <-
+  readRDS("data/eugr_bw_stack_eval_decision.rds")
+```
+
+```{r EUGR-BW prediction - Stack decision curves, include=FALSE}
+eugr_bw_stack_eval_decision_plot <-
+  list(
+    plot =
+      list(
+        data =
+          eugr_bw_stack_eval_decision |>
+          imap(
+            ~ .x$validation$plot$data |>
+              mutate(
+                model =
+                  str_to_upper(str_remove_all(.y, "eugr_bw_stack_"))
+              )
+          ) |>
+          reduce(rbind)
+      )
+    , prevalence =
+          eugr_bw_stack_eval_decision |>
+          sapply(\(x) x$validation$prevalence) |>
+          max()
+  ) |>
+  arrange_dec_plot(
+    dc_xmax = 0.6, dc_xby = 0.1
+    , dc_ymax = 0.25, dc_yby = 0.05
+    , dc_ta_angle = -75
+    , multiple = TRUE
+  )
+```
+
+```{r Create figure-21, include=FALSE}
+figure21 <-
+  ggarrange(
+    eugr_bw_stack_eval_decision_plot + theme(legend.position = "none")
+    , eugr_bw_stack_eval_discrimination_plot
+    , nrow = 1, ncol = 2
+    , widths = c(4, 5)
+    , labels = LETTERS[1:2]
+  )
+```
+
+```{r figure-21, echo=FALSE, fig.height=4, fig.width=9}
+figure21
+```
+
+Figure 21. EUGR-BW stack prediction model decision and ROC curves using validation set. DNN, deep neural network; GBM, gradient boosting machine; RF, random forest; ROC, receiver operating characteristics; RR, ridge regression.
 
 ```{r EUGR-BW prediction - Required features, include=FALSE}
 dr_before_modeling_desc$eugr_bw_baseline2_rr <-
@@ -4675,6 +5726,9 @@ hearing_stack_eval_calibration <-
   hearing_stack_eval_df_list |>
   lapply(\(x) lapply(x, calibration, seed = seed))
 
+hearing_stack_eval_calibration |>
+  saveRDS("data/hearing_stack_eval_calibration.rds")
+
 hearing_stack_eval_discrimination <-
   hearing_stack_eval_df_list[
     hearing_stack_eval_calibration |>
@@ -4683,9 +5737,132 @@ hearing_stack_eval_discrimination <-
   lapply(\(x) lapply(lapply(x, select, -id), discrimination, seed = seed))
 
 hearing_stack_eval_discrimination |>
+  saveRDS("data/hearing_stack_eval_discrimination.rds")
+```
+
+```{r Failed hearing prediction - Load stack pre-evaluation, include=FALSE}
+hearing_stack_eval_calibration <-
+  readRDS("data/hearing_stack_eval_calibration.rds")
+hearing_stack_eval_discrimination <-
+  readRDS("data/hearing_stack_eval_discrimination.rds")
+```
+
+Best model:
+
+```{r Failed hearing prediction - Show stack evaluation, echo=FALSE}
+hearing_stack_eval_discrimination |>
   select_best_auroc_lb_model() |>
   cat()
 ```
+
+```{r Failed hearing prediction - Stack calibration plots, include=FALSE}
+hearing_stack_eval_calibration_plot <-
+  hearing_stack_eval_calibration |>
+  lapply(\(x) x$validation) |>
+  lapply(arrange_calib_plot)
+```
+
+```{r Create figure-22, include=FALSE}
+figure22 <-
+  ggarrange(
+    hearing_stack_eval_calibration_plot$hearing_stack_rr
+    , hearing_stack_eval_calibration_plot$hearing_stack_rf
+    , hearing_stack_eval_calibration_plot$hearing_stack_gbm
+    , hearing_stack_eval_calibration_plot$hearing_stack_dnn
+    , nrow = 1, ncol = 4
+    , widths = c(5, 5, 5, 5)
+    , labels = LETTERS[1:4]
+  )
+```
+
+```{r figure-22, echo=FALSE, fig.height=6, fig.width=20}
+figure22
+```
+
+Figure 22. Failed hearing test stack prediction model calibration plots using validation set: (A) RR; (B) RF; (C) GBM; and (D) DNN. Vertical dashed lines indicate the standard threshold.
+
+```{r Failed hearing prediction - Stack ROC curves, include=FALSE}
+hearing_stack_eval_discrimination_plot <-
+  list(
+    plot =
+      list(
+        data =
+          hearing_stack_eval_discrimination |>
+          imap(
+            ~ .x$validation$plot$data |>
+              mutate(
+                model =
+                  str_to_upper(str_remove_all(.y, "hearing_stack_"))
+              )
+          ) |>
+          reduce(rbind)
+      )
+  ) |>
+  arrange_disc_plot(multiple = TRUE)
+```
+
+```{r Failed hearing prediction - Stack DCAs, eval=FALSE, include=FALSE}
+hearing_stack_eval_decision <-
+  hearing_stack_eval_df_list[
+    hearing_stack_eval_calibration |>
+      select_well_calibrated_model()
+  ] |>
+  lapply(\(x) lapply(lapply(x, select, -id), decision, seed = seed))
+
+hearing_stack_eval_decision |>
+  saveRDS("data/hearing_stack_eval_decision.rds")
+```
+
+```{r Failed hearing prediction - Stack pre-DCAs, include=FALSE}
+hearing_stack_eval_decision <-
+  readRDS("data/hearing_stack_eval_decision.rds")
+```
+
+```{r Failed hearing prediction - Stack decision curves, include=FALSE}
+hearing_stack_eval_decision_plot <-
+  list(
+    plot =
+      list(
+        data =
+          hearing_stack_eval_decision |>
+          imap(
+            ~ .x$validation$plot$data |>
+              mutate(
+                model =
+                  str_to_upper(str_remove_all(.y, "hearing_stack_"))
+              )
+          ) |>
+          reduce(rbind)
+      )
+    , prevalence =
+          hearing_stack_eval_decision |>
+          sapply(\(x) x$validation$prevalence) |>
+          max()
+  ) |>
+  arrange_dec_plot(
+    dc_xmax = 0.3, dc_xby = 0.1
+    , dc_ymax = 0.12, dc_yby = 0.02
+    , dc_ta_angle = -75
+    , multiple = TRUE
+  )
+```
+
+```{r Create figure-23, include=FALSE}
+figure23 <-
+  ggarrange(
+    hearing_stack_eval_decision_plot + theme(legend.position = "none")
+    , hearing_stack_eval_discrimination_plot
+    , nrow = 1, ncol = 2
+    , widths = c(4, 5)
+    , labels = LETTERS[1:2]
+  )
+```
+
+```{r figure-23, echo=FALSE, fig.height=4, fig.width=9}
+figure23
+```
+
+Figure 23. Failed hearing stack prediction model decision and ROC curves using validation set. DNN, deep neural network; GBM, gradient boosting machine; RF, random forest; ROC, receiver operating characteristics; RR, ridge regression.
 
 ```{r Failed hearing prediction - Required features, include=FALSE}
 dr_before_modeling_desc$hearing_stack_rr <-
@@ -5016,6 +6193,12 @@ th$survive_baseline1_rr <-
   pull(avg)
 ```
 
+Chosen threshold:
+
+```{r Show threshold for survive baseline by train set, echo=FALSE}
+th$survive_baseline1_rr
+```
+
 ```{r Evaluate survive baseline using test set, include=FALSE}
 eval_plot$survive_baseline1_rr <-
   lapply(eval, \(x) x$survive_baseline1_rr$test) |>
@@ -5027,11 +6210,11 @@ eval_plot$survive_baseline1_rr <-
   )
 ```
 
-```{r figure-6, echo=FALSE, fig.height=6.5, fig.width=10}
+```{r figure-24, echo=FALSE, fig.height=6.5, fig.width=10}
 eval_plot$survive_baseline1_rr
 ```
 
-Figure 6. Survival baseline prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
+Figure 24. Survival baseline prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
 
 ### Survival stack
 
@@ -5040,6 +6223,21 @@ th$survive_stack_dnn <-
   eval$threshold$survive_stack_dnn$train |>
   filter(metric == "th") |>
   pull(avg)
+```
+
+Chosen threshold:
+
+```{r Show threshold for survive stack by train set, echo=FALSE}
+th$survive_stack_dnn
+```
+
+Specificity at the chosen threshold:
+
+```{r Specificity at threshold for survive stack by train set, echo=FALSE}
+survive_stack_eval_discrimination$survive_stack_dnn$validation$plot$data |>
+  cbind(data.frame(th2 = th$survive_stack_dnn)) |>
+  filter(th == th2) |>
+  pull(tnr)
 ```
 
 ```{r Evaluate survive stack using test set, include=FALSE}
@@ -5056,11 +6254,73 @@ eval_plot$survive_stack_dnn <-
   )
 ```
 
-```{r figure-7, echo=FALSE, fig.height=7.5, fig.width=10}
+```{r figure-25, echo=FALSE, fig.height=7.5, fig.width=10}
 eval_plot$survive_stack_dnn
 ```
 
-Figure 7. Survival stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
+Figure 25. Survival stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
+
+```{r Create figure-26, include=FALSE}
+figure26 <-
+  survive_baseline1_eval_discrimination |>
+  c(survive_stack_eval_discrimination) |>
+  imap(
+    ~ .x$validation$metrics |>
+      mutate(
+        outcome =
+          str_remove_all(
+            .y
+            , paste0(
+                "_baseline1|_stack|"
+               , paste0(paste0('_', algorithms$algorithm), collapse = "|")
+              )
+          ) |>
+          str_to_sentence()
+        , type =
+          str_remove_all(
+            .y
+            , paste0(
+                "survive_|[:digit:]+|"
+               , paste0(paste0('_', algorithms$algorithm), collapse = "|")
+              )
+          ) |>
+          str_to_sentence()
+        , model =
+          str_to_upper(str_remove_all(.y, "survive_|baseline1_|stack_"))
+      )
+  ) |>
+  reduce(rbind) |>
+  mutate(lb = estimate - ci, ub = estimate + ci) |>
+  mutate(
+    outcome = factor(outcome, unique(outcome))
+    , type = factor(type, c("Baseline", "Stack"))
+    , model = factor(model, rev(str_to_upper(algorithms$algorithm)))
+  ) |>
+  group_by(outcome, type) |>
+  mutate(best = ifelse(lb == max(lb), "Yes", "No")) |>
+  ungroup() |>
+  ggplot(aes(model, estimate, color = best)) +
+  geom_errorbar(aes(ymin = lb, ymax = ub), width = 0.2) +
+  geom_point() +
+  facet_grid(
+    outcome + type ~ ., scales = "free_y", space = "free_y", switch = "y"
+  ) +
+  coord_flip() +
+  xlab("Model") +
+  ylab("c-statistic (95% CI)") +
+  scale_color_discrete("Best?") +
+  theme(
+    strip.background.y = element_blank()
+    , strip.text.y.left = element_text(angle = 0)
+    , strip.placement = "outside"
+  )
+```
+
+```{r figure-26, echo=FALSE, fig.height=1.5, fig.width=7}
+figure26
+```
+
+Figure 26. Predictive performance of survive-targeting prediction models using validation set. Only eligible models are shown. DNN, deep neural network; RR, ridge regression.
 
 ### Severe ROP stack
 
@@ -5069,6 +6329,21 @@ th$rop_severe_stack_rr <-
   eval$threshold$rop_severe_stack_rr$train |>
   filter(metric == "th") |>
   pull(avg)
+```
+
+Chosen threshold:
+
+```{r Show threshold for severe ROP stack by train set, echo=FALSE}
+th$rop_severe_stack_rr
+```
+
+Specificity at the chosen threshold:
+
+```{r Specificity at threshold for severe ROP stack by train set, echo=FALSE}
+rop_severe_stack_eval_discrimination$rop_severe_stack_rr$validation$plot$data |>
+  cbind(data.frame(th2 = th$rop_severe_stack_rr)) |>
+  filter(th == th2) |>
+  pull(tnr)
 ```
 
 ```{r Evaluate severe ROP stack using test set, include=FALSE}
@@ -5086,11 +6361,77 @@ eval_plot$rop_severe_stack_rr <-
   )
 ```
 
-```{r figure-8, echo=FALSE, fig.height=8, fig.width=10}
+```{r figure-27, echo=FALSE, fig.height=8, fig.width=10}
 eval_plot$rop_severe_stack_rr
 ```
 
-Figure 8. Severe ROP stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
+Figure 27. Severe ROP stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
+
+```{r Create figure-28, include=FALSE}
+figure28 <-
+  survive_baseline1_eval_discrimination |>
+  c(survive_stack_eval_discrimination) |>
+  c(rop_severe_stack_eval_discrimination) |>
+  imap(
+    ~ .x$validation$metrics |>
+      mutate(
+        outcome =
+          str_remove_all(
+            .y
+            , paste0(
+                "_baseline1|_stack|"
+               , paste0(paste0('_', algorithms$algorithm), collapse = "|")
+              )
+          ) |>
+          str_to_sentence() |>
+          str_replace_all("Rop_severe", "Severe ROP")
+        , type =
+          str_remove_all(
+            .y
+            , paste0(
+                "survive_|rop_severe_|[:digit:]+|"
+               , paste0(paste0('_', algorithms$algorithm), collapse = "|")
+              )
+          ) |>
+          str_to_sentence()
+        , model =
+          str_to_upper(
+            str_remove_all(.y, "survive_|rop_severe_|baseline1_|stack_")
+          )
+      )
+  ) |>
+  reduce(rbind) |>
+  mutate(lb = estimate - ci, ub = estimate + ci) |>
+  mutate(
+    outcome = factor(outcome, unique(outcome))
+    , type = factor(type, c("Baseline", "Stack"))
+    , model = factor(model, rev(str_to_upper(algorithms$algorithm)))
+  ) |>
+  group_by(outcome, type) |>
+  mutate(best = ifelse(lb == max(lb), "Yes", "No")) |>
+  ungroup() |>
+  ggplot(aes(model, estimate, color = best)) +
+  geom_errorbar(aes(ymin = lb, ymax = ub), width = 0.2) +
+  geom_point() +
+  facet_grid(
+    outcome + type ~ ., scales = "free_y", space = "free_y", switch = "y"
+  ) +
+  coord_flip() +
+  xlab("Model") +
+  ylab("c-statistic (95% CI)") +
+  scale_color_discrete("Best?") +
+  theme(
+    strip.background.y = element_blank()
+    , strip.text.y.left = element_text(angle = 0)
+    , strip.placement = "outside"
+  )
+```
+
+```{r figure-28, echo=FALSE, fig.height=2.5, fig.width=7}
+figure28
+```
+
+Figure 28. Predictive performance of severe ROP-targeting prediction models using validation set. Only eligible models are shown. DNN, deep neural network; ROP, retinopathy of prematurity; RR, ridge regression.
 
 ### BPD stack
 
@@ -5099,6 +6440,21 @@ th$bpd_stack_rf <-
   eval$threshold$bpd_stack_rf$train |>
   filter(metric == "th") |>
   pull(avg)
+```
+
+Chosen threshold:
+
+```{r Show threshold for BPD stack by train set, echo=FALSE}
+th$bpd_stack_rf
+```
+
+Specificity at the chosen threshold:
+
+```{r Specificity at threshold for BPD stack by train set, echo=FALSE}
+bpd_stack_eval_discrimination$bpd_stack_rf$validation$plot$data |>
+  cbind(data.frame(th2 = th$bpd_stack_rf)) |>
+  filter(th == th2) |>
+  pull(tnr)
 ```
 
 ```{r Evaluate BPD stack using test set, include=FALSE}
@@ -5116,11 +6472,77 @@ eval_plot$bpd_stack_rf <-
   )
 ```
 
-```{r figure-9, echo=FALSE, fig.height=7, fig.width=10}
+```{r figure-29, echo=FALSE, fig.height=7, fig.width=10}
 eval_plot$bpd_stack_rf
 ```
 
-Figure 9. BPD stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
+Figure 29. BPD stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
+
+```{r Create figure-30, include=FALSE}
+figure30 <-
+  survive_baseline1_eval_discrimination |>
+  c(survive_stack_eval_discrimination) |>
+  c(bpd_stack_eval_discrimination) |>
+  imap(
+    ~ .x$validation$metrics |>
+      mutate(
+        outcome =
+          str_remove_all(
+            .y
+            , paste0(
+                "_baseline1|_stack|"
+               , paste0(paste0('_', algorithms$algorithm), collapse = "|")
+              )
+          ) |>
+          str_to_sentence() |>
+          str_replace_all("Bpd", "BPD")
+        , type =
+          str_remove_all(
+            .y
+            , paste0(
+                "survive_|bpd_|[:digit:]+|"
+               , paste0(paste0('_', algorithms$algorithm), collapse = "|")
+              )
+          ) |>
+          str_to_sentence()
+        , model =
+          str_to_upper(
+            str_remove_all(.y, "survive_|bpd_|baseline1_|stack_")
+          )
+      )
+  ) |>
+  reduce(rbind) |>
+  mutate(lb = estimate - ci, ub = estimate + ci) |>
+  mutate(
+    outcome = factor(outcome, unique(outcome))
+    , type = factor(type, c("Baseline", "Stack"))
+    , model = factor(model, rev(str_to_upper(algorithms$algorithm)))
+  ) |>
+  group_by(outcome, type) |>
+  mutate(best = ifelse(lb == max(lb), "Yes", "No")) |>
+  ungroup() |>
+  ggplot(aes(model, estimate, color = best)) +
+  geom_errorbar(aes(ymin = lb, ymax = ub), width = 0.2) +
+  geom_point() +
+  facet_grid(
+    outcome + type ~ ., scales = "free_y", space = "free_y", switch = "y"
+  ) +
+  coord_flip() +
+  xlab("Model") +
+  ylab("c-statistic (95% CI)") +
+  scale_color_discrete("Best?") +
+  theme(
+    strip.background.y = element_blank()
+    , strip.text.y.left = element_text(angle = 0)
+    , strip.placement = "outside"
+  )
+```
+
+```{r figure-30, echo=FALSE, fig.height=2.5, fig.width=7}
+figure30
+```
+
+Figure 30. Predictive performance of BPD-targeting prediction models using validation set. Only eligible models are shown. BPD, bronchopulmonary disease; DNN, deep neural network; ROP, retinopathy of prematurity; RR, ridge regression.
 
 ### Moderate/severe BPD stack
 
@@ -5129,6 +6551,23 @@ th$bpd_moderate_severe_stack_rf <-
   eval$threshold$bpd_moderate_severe_stack_rf$train |>
   filter(metric == "th") |>
   pull(avg)
+```
+
+Chosen threshold:
+
+```{r Show threshold for moderate/severe BPD stack by train set, echo=FALSE}
+th$bpd_moderate_severe_stack_rf
+```
+
+Specificity at the chosen threshold:
+
+```{r Specificity at threshold for mod/sev BPD stack by train set, echo=FALSE}
+bpd_moderate_severe_stack_eval_discrimination[[
+    "bpd_moderate_severe_stack_rf"
+  ]]$validation$plot$data |>
+  cbind(data.frame(th2 = th$bpd_moderate_severe_stack_rf)) |>
+  filter(th == th2) |>
+  pull(tnr)
 ```
 
 ```{r Evaluate moderate/severe BPD stack using test set, include=FALSE}
@@ -5147,11 +6586,81 @@ eval_plot$bpd_moderate_severe_stack_rf <-
   )
 ```
 
-```{r figure-10, echo=FALSE, fig.height=7.5, fig.width=10}
+```{r figure-31, echo=FALSE, fig.height=7.5, fig.width=10}
 eval_plot$bpd_moderate_severe_stack_rf
 ```
 
-Figure 10. Moderate/severe BPD stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
+Figure 31. Moderate/severe BPD stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
+
+```{r Create figure-32, include=FALSE}
+figure32 <-
+  survive_baseline1_eval_discrimination |>
+  c(survive_stack_eval_discrimination) |>
+  c(bpd_stack_eval_discrimination) |>
+  c(bpd_moderate_severe_stack_eval_discrimination) |>
+  imap(
+    ~ .x$validation$metrics |>
+      mutate(
+        outcome =
+          str_remove_all(
+            .y
+            , paste0(
+                "_baseline1|_stack|"
+               , paste0(paste0('_', algorithms$algorithm), collapse = "|")
+              )
+          ) |>
+          str_to_sentence() |>
+          str_replace_all("Bpd", "BPD") |>
+          str_replace_all("Bpd_moderate_severe", "Moderate/severe BPD")
+        , type =
+          str_remove_all(
+            .y
+            , paste0(
+                "survive_|bpd_|moderate_severe_|[:digit:]+|"
+               , paste0(paste0('_', algorithms$algorithm), collapse = "|")
+              )
+          ) |>
+          str_to_sentence()
+        , model =
+          str_to_upper(
+            str_remove_all(
+              .y, "survive_|bpd_|moderate_severe_|baseline1_|stack_"
+            )
+          )
+      )
+  ) |>
+  reduce(rbind) |>
+  mutate(lb = estimate - ci, ub = estimate + ci) |>
+  mutate(
+    outcome = factor(outcome, unique(outcome))
+    , type = factor(type, c("Baseline", "Stack"))
+    , model = factor(model, rev(str_to_upper(algorithms$algorithm)))
+  ) |>
+  group_by(outcome, type) |>
+  mutate(best = ifelse(lb == max(lb), "Yes", "No")) |>
+  ungroup() |>
+  ggplot(aes(model, estimate, color = best)) +
+  geom_errorbar(aes(ymin = lb, ymax = ub), width = 0.2) +
+  geom_point() +
+  facet_grid(
+    outcome + type ~ ., scales = "free_y", space = "free_y", switch = "y"
+  ) +
+  coord_flip() +
+  xlab("Model") +
+  ylab("c-statistic (95% CI)") +
+  scale_color_discrete("Best?") +
+  theme(
+    strip.background.y = element_blank()
+    , strip.text.y.left = element_text(angle = 0)
+    , strip.placement = "outside"
+  )
+```
+
+```{r figure-32, echo=FALSE, fig.height=3.5, fig.width=7}
+figure32
+```
+
+Figure 32. Predictive performance of moderate/severe BPD-targeting prediction models using validation set. Only eligible models are shown. BPD, bronchopulmonary disease; DNN, deep neural network; ROP, retinopathy of prematurity; RR, ridge regression.
 
 ### EUGR-HC baseline
 
@@ -5160,6 +6669,12 @@ th$eugr_hc_baseline2_rr <-
   eval$threshold$eugr_hc_baseline2_rr$train |>
   filter(metric == "th") |>
   pull(avg)
+```
+
+Chosen threshold:
+
+```{r Show threshold for EUGR-HC baseline by train set, echo=FALSE}
+th$eugr_hc_baseline2_rr
 ```
 
 ```{r Evaluate EUGR-HC baseline using test set, include=FALSE}
@@ -5175,11 +6690,11 @@ eval_plot$eugr_hc_baseline2_rr <-
   )
 ```
 
-```{r figure-11, echo=FALSE, fig.height=6.5, fig.width=10}
+```{r figure-33, echo=FALSE, fig.height=6.5, fig.width=10}
 eval_plot$eugr_hc_baseline2
 ```
 
-Figure 11. EUGR-HC baseline prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
+Figure 33. EUGR-HC baseline prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
 
 ### EUGR-HC stack
 
@@ -5188,6 +6703,21 @@ th$eugr_hc_stack_rr <-
   eval$threshold$eugr_hc_stack_rr$train |>
   filter(metric == "th") |>
   pull(avg)
+```
+
+Chosen threshold:
+
+```{r Show threshold for EUGR-HC stack by train set, echo=FALSE}
+th$eugr_hc_stack_rr
+```
+
+Specificity at the chosen threshold:
+
+```{r Specificity at threshold for EUGR-HC stack by train set, echo=FALSE}
+eugr_hc_stack_eval_discrimination$eugr_hc_stack_rr$validation$plot$data |>
+  cbind(data.frame(th2 = th$eugr_hc_stack_rr)) |>
+  filter(th == th2) |>
+  pull(tnr)
 ```
 
 ```{r Evaluate EUGR-HC stack using test set, include=FALSE}
@@ -5205,11 +6735,80 @@ eval_plot$eugr_hc_stack_rr <-
   )
 ```
 
-```{r figure-12, echo=FALSE, fig.height=8, fig.width=10}
+```{r figure-34, echo=FALSE, fig.height=8, fig.width=10}
 eval_plot$eugr_hc_stack_rr
 ```
 
-Figure 12. EUGR-HC stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
+Figure 34. EUGR-HC stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
+
+```{r Create figure-35, include=FALSE}
+figure35 <-
+  survive_baseline1_eval_discrimination |>
+  c(eugr_hc_baseline2_eval_discrimination) |>
+  c(eugr_hc_stack1_eval_discrimination) |>
+  c(eugr_hc_stack_eval_discrimination) |>
+  imap(
+    ~ .x$validation$metrics |>
+      mutate(
+        outcome =
+          str_remove_all(
+            .y
+            , paste0(
+                "_baseline|[:digit:]+|_stack|"
+               , paste0(paste0('_', algorithms$algorithm), collapse = "|")
+              )
+          ) |>
+          str_to_sentence() |>
+          str_replace_all("Eugr_hc", "EUGR-HC")
+        , type =
+          str_remove_all(
+            .y
+            , paste0(
+                "survive_|eugr_hc_|"
+               , paste0(paste0('_', algorithms$algorithm), collapse = "|")
+              )
+          ) |>
+          str_to_sentence()
+        , model =
+          str_to_upper(
+            str_remove_all(
+              .y, "survive_|eugr_hc_|baseline1_|baseline2_|stack_|stack1_"
+            )
+          )
+      )
+  ) |>
+  reduce(rbind) |>
+  mutate(lb = estimate - ci, ub = estimate + ci) |>
+  mutate(
+    outcome = factor(outcome, unique(outcome))
+    , type = factor(type, c("Baseline1", "Baseline2", "Stack1", "Stack"))
+    , model = factor(model, rev(str_to_upper(algorithms$algorithm)))
+  ) |>
+  group_by(outcome, type) |>
+  mutate(best = ifelse(lb == max(lb), "Yes", "No")) |>
+  ungroup() |>
+  ggplot(aes(model, estimate, color = best)) +
+  geom_errorbar(aes(ymin = lb, ymax = ub), width = 0.2) +
+  geom_point() +
+  facet_grid(
+    outcome + type ~ ., scales = "free_y", space = "free_y", switch = "y"
+  ) +
+  coord_flip() +
+  xlab("Model") +
+  ylab("c-statistic (95% CI)") +
+  scale_color_discrete("Best?") +
+  theme(
+    strip.background.y = element_blank()
+    , strip.text.y.left = element_text(angle = 0)
+    , strip.placement = "outside"
+  )
+```
+
+```{r figure-35, echo=FALSE, fig.height=3.5, fig.width=7}
+figure35
+```
+
+Figure 35. Predictive performance of EUGR-HC-targeting prediction models using validation set. Only eligible models are shown. DNN, deep neural network; EUGR-HC, extrauterine growth restriction by head circumference; ROP, retinopathy of prematurity; RR, ridge regression.
 
 ### EUGR-BW baseline
 
@@ -5218,6 +6817,12 @@ th$eugr_bw_baseline2_rr <-
   eval$threshold$eugr_bw_baseline2_rr$train |>
   filter(metric == "th") |>
   pull(avg)
+```
+
+Chosen threshold:
+
+```{r Show threshold for EUGR-BW baseline by train set, echo=FALSE}
+th$eugr_bw_baseline2_rr
 ```
 
 ```{r Evaluate EUGR-BW baseline using test set, include=FALSE}
@@ -5233,11 +6838,11 @@ eval_plot$eugr_bw_baseline2_rr <-
   )
 ```
 
-```{r figure-13, echo=FALSE, fig.height=6.5, fig.width=10}
+```{r figure-36, echo=FALSE, fig.height=6.5, fig.width=10}
 eval_plot$eugr_bw_baseline2
 ```
 
-Figure 13. EUGR-BW baseline prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
+Figure 36. EUGR-BW baseline prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
 
 ### EUGR-BW stack
 
@@ -5246,6 +6851,21 @@ th$eugr_bw_stack_rr <-
   eval$threshold$eugr_bw_stack_rr$train |>
   filter(metric == "th") |>
   pull(avg)
+```
+
+Chosen threshold:
+
+```{r Show threshold for EUGR-BW stack by train set, echo=FALSE}
+th$eugr_bw_stack_rr
+```
+
+Specificity at the chosen threshold:
+
+```{r Specificity at threshold for EUGR-BW stack by train set, echo=FALSE}
+eugr_bw_stack_eval_discrimination$eugr_bw_stack_rr$validation$plot$data |>
+  cbind(data.frame(th2 = th$eugr_bw_stack_rr)) |>
+  filter(th == th2) |>
+  pull(tnr)
 ```
 
 ```{r Evaluate EUGR-BW stack using test set, include=FALSE}
@@ -5263,11 +6883,80 @@ eval_plot$eugr_bw_stack_rr <-
   )
 ```
 
-```{r figure-14, echo=FALSE, fig.height=8, fig.width=10}
+```{r figure-37, echo=FALSE, fig.height=8, fig.width=10}
 eval_plot$eugr_bw_stack
 ```
 
-Figure 14. EUGR-BW stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
+Figure 37. EUGR-BW stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
+
+```{r Create figure-38, include=FALSE}
+figure38 <-
+  survive_baseline1_eval_discrimination |>
+  c(eugr_bw_baseline2_eval_discrimination) |>
+  c(eugr_bw_stack1_eval_discrimination) |>
+  c(eugr_bw_stack_eval_discrimination) |>
+  imap(
+    ~ .x$validation$metrics |>
+      mutate(
+        outcome =
+          str_remove_all(
+            .y
+            , paste0(
+                "_baseline|[:digit:]+|_stack|"
+               , paste0(paste0('_', algorithms$algorithm), collapse = "|")
+              )
+          ) |>
+          str_to_sentence() |>
+          str_replace_all("Eugr_bw", "EUGR-BW")
+        , type =
+          str_remove_all(
+            .y
+            , paste0(
+                "survive_|eugr_bw_|"
+               , paste0(paste0('_', algorithms$algorithm), collapse = "|")
+              )
+          ) |>
+          str_to_sentence()
+        , model =
+          str_to_upper(
+            str_remove_all(
+              .y, "survive_|eugr_bw_|baseline1_|baseline2_|stack_|stack1_"
+            )
+          )
+      )
+  ) |>
+  reduce(rbind) |>
+  mutate(lb = estimate - ci, ub = estimate + ci) |>
+  mutate(
+    outcome = factor(outcome, unique(outcome))
+    , type = factor(type, c("Baseline1", "Baseline2", "Stack1", "Stack"))
+    , model = factor(model, rev(str_to_upper(algorithms$algorithm)))
+  ) |>
+  group_by(outcome, type) |>
+  mutate(best = ifelse(lb == max(lb), "Yes", "No")) |>
+  ungroup() |>
+  ggplot(aes(model, estimate, color = best)) +
+  geom_errorbar(aes(ymin = lb, ymax = ub), width = 0.2) +
+  geom_point() +
+  facet_grid(
+    outcome + type ~ ., scales = "free_y", space = "free_y", switch = "y"
+  ) +
+  coord_flip() +
+  xlab("Model") +
+  ylab("c-statistic (95% CI)") +
+  scale_color_discrete("Best?") +
+  theme(
+    strip.background.y = element_blank()
+    , strip.text.y.left = element_text(angle = 0)
+    , strip.placement = "outside"
+  )
+```
+
+```{r figure-38, echo=FALSE, fig.height=3.5, fig.width=7}
+figure38
+```
+
+Figure 38. Predictive performance of EUGR-HC-targeting prediction models using validation set. Only eligible models are shown. DNN, deep neural network; EUGR-BW, extrauterine growth restriction by body weight; RR, ridge regression.
 
 ### Failed hearing test stack
 
@@ -5276,6 +6965,21 @@ th$hearing_stack_rr <-
   eval$threshold$hearing_stack_rr$train |>
   filter(metric == "th") |>
   pull(avg)
+```
+
+Chosen threshold:
+
+```{r Show threshold for failed hearing stack by train set, echo=FALSE}
+th$hearing_stack_rr
+```
+
+Specificity at the chosen threshold:
+
+```{r Specificity at threshold for failed hearing stack by train set, echo=FALSE}
+hearing_stack_eval_discrimination$hearing_stack_rr$validation$plot$data |>
+  cbind(data.frame(th2 = th$hearing_stack_rr)) |>
+  filter(th == th2) |>
+  pull(tnr)
 ```
 
 ```{r Evaluate failed hearing stack using test set, include=FALSE}
@@ -5293,11 +6997,78 @@ eval_plot$hearing_stack_rr <-
   )
 ```
 
-```{r figure-15, echo=FALSE, fig.height=7.5, fig.width=10}
+```{r figure-39, echo=FALSE, fig.height=7.5, fig.width=10}
 eval_plot$hearing_stack_rr
 ```
 
-Figure 15. Failed hearing test stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
+Figure 39. Failed hearing test stacked prediction model evaluation using test set for: (A) calibration plot; (B) decision curve; (C) ROC curve; and (D) SHAP beeswarm plot. Vertical dashed line in panels A and B indicates the chosen threshold. ROC, receiver operating characteristics; SHAP, the Shapley additive explanation.
+
+```{r Create figure-40, include=FALSE}
+figure40 <-
+  survive_baseline1_eval_discrimination |>
+  c(hearing_stack_eval_discrimination) |>
+  imap(
+    ~ .x$validation$metrics |>
+      mutate(
+        outcome =
+          str_remove_all(
+            .y
+            , paste0(
+                "_baseline1|_stack|"
+               , paste0(paste0('_', algorithms$algorithm), collapse = "|")
+              )
+          ) |>
+          str_to_sentence() |>
+          str_replace_all("Hearing", "Failed\nhearing test")
+        , type =
+          str_remove_all(
+            .y
+            , paste0(
+                "survive_|hearing_|[:digit:]+|"
+               , paste0(paste0('_', algorithms$algorithm), collapse = "|")
+              )
+          ) |>
+          str_to_sentence()
+        , model =
+          str_to_upper(
+            str_remove_all(
+              .y, "survive_|hearing_|baseline1_|stack_"
+            )
+          )
+      )
+  ) |>
+  reduce(rbind) |>
+  mutate(lb = estimate - ci, ub = estimate + ci) |>
+  mutate(
+    outcome = factor(outcome, unique(outcome))
+    , type = factor(type, c("Baseline", "Stack"))
+    , model = factor(model, rev(str_to_upper(algorithms$algorithm)))
+  ) |>
+  group_by(outcome, type) |>
+  mutate(best = ifelse(lb == max(lb), "Yes", "No")) |>
+  ungroup() |>
+  ggplot(aes(model, estimate, color = best)) +
+  geom_errorbar(aes(ymin = lb, ymax = ub), width = 0.2) +
+  geom_point() +
+  facet_grid(
+    outcome + type ~ ., scales = "free_y", space = "free_y", switch = "y"
+  ) +
+  coord_flip() +
+  xlab("Model") +
+  ylab("c-statistic (95% CI)") +
+  scale_color_discrete("Best?") +
+  theme(
+    strip.background.y = element_blank()
+    , strip.text.y.left = element_text(angle = 0)
+    , strip.placement = "outside"
+  )
+```
+
+```{r figure-40, echo=FALSE, fig.height=3.5, fig.width=7}
+figure40
+```
+
+Figure 40. Predictive performance of failed hearing test-targeting prediction models using validation set. Only eligible models are shown. DNN, deep neural network; RR, ridge regression.
 
 ## Predictive performance
 
@@ -5697,64 +7468,64 @@ cm_selected_time_summary_indep_test <-
   select(outcome, metric, avg, everything())
 ```
 
-```{r figure-16, fig.height=3.5, fig.width=7}
+```{r figure-41, fig.height=3.5, fig.width=7}
 mutate(cm_selected_time_summary_val, set = "Validation") |>
   rbind(mutate(cm_selected_time_summary, set = "Test")) |>
   timing_selection_plot("survive", "t_7")
 ```
 
-Figure 16. Performance for predicting survival at particular time using the chosen threshold. The best timing was selected according to TPR and PPV using validation set. PPV, positive predictive value or precision; TPR, true positive rate or sensitivity.
+Figure 41. Performance for predicting survival at particular time using the chosen threshold. The best timing was selected according to TPR and PPV using validation set. PPV, positive predictive value or precision; TPR, true positive rate or sensitivity.
 
-```{r figure-17, fig.height=5, fig.width=7}
+```{r figure-42, fig.height=5, fig.width=7}
 mutate(cm_selected_time_summary_val, set = "Validation") |>
   rbind(mutate(cm_selected_time_summary, set = "Test")) |>
   timing_selection_plot("rop_severe", "t_14")
 ```
 
-Figure 17. Performance for predicting severe ROP at particular time using the chosen threshold. The best timing was selected according to TPR, TNR, and NPV using validation set. NPV, negative predictive value; ROP, retinopathy of prematurity; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity.
+Figure 42. Performance for predicting severe ROP at particular time using the chosen threshold. The best timing was selected according to TPR, TNR, and NPV using validation set. NPV, negative predictive value; ROP, retinopathy of prematurity; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity.
 
-```{r figure-18, fig.height=5, fig.width=7}
+```{r figure-43, fig.height=5, fig.width=7}
 mutate(cm_selected_time_summary_val, set = "Validation") |>
   rbind(mutate(cm_selected_time_summary, set = "Test")) |>
   timing_selection_plot("bpd", "t_28")
 ```
 
-Figure 18. Performance for predicting BPD at particular time using the chosen threshold. The best timing was selected according to TPR, TNR, and NPV using validation set. BPD, bronchopulmonary disease; NPV, negative predictive value; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity.
+Figure 43. Performance for predicting BPD at particular time using the chosen threshold. The best timing was selected according to TPR, TNR, and NPV using validation set. BPD, bronchopulmonary disease; NPV, negative predictive value; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity.
 
-```{r figure-19, fig.height=5, fig.width=7}
+```{r figure-44, fig.height=5, fig.width=7}
 mutate(cm_selected_time_summary_val, set = "Validation") |>
   rbind(mutate(cm_selected_time_summary, set = "Test")) |>
   timing_selection_plot("bpd_moderate_severe", "t_28")
 ```
 
-Figure 19. Performance for predicting moderate-to-severe BPD at particular time using the chosen threshold. The best timing was selected according to TPR, TNR, and NPV using validation set. BPD, bronchopulmonary disease; NPV, negative predictive value; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity.
+Figure 44. Performance for predicting moderate-to-severe BPD at particular time using the chosen threshold. The best timing was selected according to TPR, TNR, and NPV using validation set. BPD, bronchopulmonary disease; NPV, negative predictive value; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity.
 
-```{r figure-20, fig.height=5, fig.width=7}
+```{r figure-45, fig.height=5, fig.width=7}
 mutate(cm_selected_time_summary_val, set = "Validation") |>
   rbind(mutate(cm_selected_time_summary, set = "Test")) |>
   timing_selection_plot("eugr_hc", "t_28")
 ```
 
-Figure 20. Performance for predicting EUGR-HC at particular time using the chosen threshold. The best timing was selected according to TPR, PPV, TNR, and NPV using validation set. EUGR-HC, extrauterine growth restriction by head circumference; NPV, negative predictive value; PPV, positive predictive value or precision; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity.
+Figure 45. Performance for predicting EUGR-HC at particular time using the chosen threshold. The best timing was selected according to TPR, PPV, TNR, and NPV using validation set. EUGR-HC, extrauterine growth restriction by head circumference; NPV, negative predictive value; PPV, positive predictive value or precision; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity.
 
-```{r figure-21, fig.height=5, fig.width=7}
+```{r figure-46, fig.height=5, fig.width=7}
 mutate(cm_selected_time_summary_val, set = "Validation") |>
   rbind(mutate(cm_selected_time_summary, set = "Test")) |>
   timing_selection_plot("eugr_bw", "t_14")
 ```
 
-Figure 21. Performance for predicting EUGR-BW at particular time using the chosen threshold. The best timing was selected according to TPR and NPV using validation set. EUGR-BW, extrauterine growth restriction by body weight; NPV, negative predictive value; TPR, true positive rate or sensitivity.
+Figure 46. Performance for predicting EUGR-BW at particular time using the chosen threshold. The best timing was selected according to TPR and NPV using validation set. EUGR-BW, extrauterine growth restriction by body weight; NPV, negative predictive value; TPR, true positive rate or sensitivity.
 
-```{r figure-22, fig.height=5, fig.width=7}
+```{r figure-47, fig.height=5, fig.width=7}
 mutate(cm_selected_time_summary_val, set = "Validation") |>
   rbind(mutate(cm_selected_time_summary, set = "Test")) |>
   timing_selection_plot("hearing", "t_14")
 ```
 
-Figure 22. Performance for predicting failed hearing test at particular time using the chosen threshold. The best timing was selected according to TPR, TNR, and NPV using validation set. NPV, negative predictive value; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity.
+Figure 47. Performance for predicting failed hearing test at particular time using the chosen threshold. The best timing was selected according to TPR, TNR, and NPV using validation set. NPV, negative predictive value; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity.
 
-```{r figure-23, echo=FALSE, fig.height=5, fig.width=7}
-figure23 <-
+```{r figure-48, echo=FALSE, fig.height=5, fig.width=7}
+figure48 <-
   mutate(cm_selected_time_summary, set = "Test") |>
   rbind(
     mutate(cm_selected_time_summary_indep_test, set = "Independent test")
@@ -5762,10 +7533,10 @@ figure23 <-
   timing_selection_plot(show_plot = FALSE) |>
   timing_selection_filter()
 
-figure23 |>
+figure48 |>
   filter(set == "Independent test") |>
   left_join(
-    figure23 |>
+    figure48 |>
       filter(set == "Test") |>
       select(outcome, metric, timing, ref = lb)
     , by = join_by(outcome, metric, timing)
@@ -5800,7 +7571,7 @@ figure23 |>
   )
 ```
 
-Figure 23. Predictive performance using independent test sets at particular time.
+Figure 48. Predictive performance using independent test sets at particular time.
 
 ```{r table-19, echo=FALSE}
 cm_selected_time_summary |>
@@ -5816,6 +7587,7 @@ cm_selected_time_summary |>
   unite(summary, avg, ci, sep = " ") |>
   mutate(
     outcome = factor(outcome, unique(outcome))
+    , timing = as.character(timing)
     , timing = factor(timing, unique(timing))
     , metric = factor(metric, c("AUC-ROC", "F1", "TNR", "TPR", "PPV", "NPV"))
   ) |>
@@ -5829,6 +7601,7 @@ cm_selected_time_summary |>
   ) |>
   select(outcome, timing, TH, dataset, everything()) |>
   mutate(TH = ifelse(duplicated(paste0(outcome, timing, TH)), "", TH)) |>
+  mutate(timing = as.character(timing)) |>
   mutate(timing = ifelse(duplicated(paste0(outcome, timing)), "", timing)) |>
   mutate(outcome = ifelse(duplicated(outcome), "", outcome)) |>
   mutate(
@@ -5868,7 +7641,7 @@ cm_selected_time_indep_test_bpd_disc <-
   discrimination(seed = seed)
 ```
 
-```{r figure-24, echo=FALSE, fig.height=2, fig.width=7}
+```{r figure-49, echo=FALSE, fig.height=2, fig.width=7}
 cm_selected_time_indep_test_bpd_disc$metrics |>
   mutate(
     study = "Our study, 95% CI"
@@ -5915,7 +7688,7 @@ cm_selected_time_indep_test_bpd_disc$metrics |>
   scale_color_discrete("")
 ```
 
-Figure 24. Predictive performance of BPD prediction models in our study versus previous studies. *, Kwok TC et al. (2023) did not summarize the estimates; hence, each individual's c-statistics are shown (n=6); BPD, bronchopulmonary disease; CI, confidence interval; PI, prediction interval.
+Figure 49. Predictive performance of BPD prediction models in our study versus previous studies. *, Kwok TC et al. (2023) did not summarize the estimates; hence, each individual's c-statistics are shown (n=6); BPD, bronchopulmonary disease; CI, confidence interval; PI, prediction interval.
 
 ```{r Moderate/severe BPD test discrimination, include=FALSE}
 cm_selected_time_test_bpd_moderate_severe_disc <-
@@ -5929,7 +7702,7 @@ cm_selected_time_indep_test_bpd_moderate_severe_disc <-
   discrimination(seed = seed)
 ```
 
-```{r figure-25, echo=FALSE, fig.height=1.5, fig.width=7}
+```{r figure-50, echo=FALSE, fig.height=1.5, fig.width=7}
 cm_selected_time_test_bpd_moderate_severe_disc$metrics |>
   mutate(
     study = "Our study, 95% CI (internal validation)"
@@ -5961,7 +7734,102 @@ cm_selected_time_test_bpd_moderate_severe_disc$metrics |>
   scale_y_continuous("c-statistic", limits = c(0.5, 1))
 ```
 
-Figure 25. Predictive performance of moderate/severe BPD prediction models in our study versus previous studies. BPD, bronchopulmonary disease; CI, confidence interval.
+Figure 50. Predictive performance of moderate/severe BPD prediction models in our study versus previous studies. BPD, bronchopulmonary disease; CI, confidence interval.
+
+```{r figure-51, echo=FALSE, fig.height=1.5, fig.width=7}
+cm_selected_time_test_bpd_moderate_severe_disc$metrics |>
+  mutate(
+    study = "Our study, 95% CI (internal validation)"
+    , lb = estimate - ci
+    , ub = estimate + ci
+  ) |>
+  select(study, avg = estimate, lb, ub) |>
+  rbind(
+    cm_selected_time_indep_test_bpd_moderate_severe_disc$metrics |>
+      mutate(
+        study = "Our study, 95% CI (external validation)"
+        , lb = estimate - ci
+        , ub = estimate + ci
+      ) |>
+      select(study, avg = estimate, lb, ub)
+  ) |>
+  rbind(
+    read_csv(
+      "inst/extdata/10.1001_jamanetworkopen.2021.35879.csv"
+      , show_col_types = FALSE
+    )
+  ) |>
+  rbind(
+    read_csv(
+      "inst/extdata/10.1038_s41372-022-01392-8.csv"
+      , show_col_types = FALSE
+    )
+  ) |>
+  mutate_at("study", \(x) factor(x, rev(unique(x)))) |>
+  ggplot(aes(study, avg)) +
+  geom_errorbar(aes(ymin = lb, ymax = ub), width = 0.2) +
+  geom_point() +
+  coord_flip() +
+  xlab("") +
+  scale_y_continuous("c-statistic", limits = c(0.5, 1))
+```
+
+Figure 51. Predictive performance of severe ROP prediction models in our study versus previous studies. *, neither 95% CI nor summarized estimate were reported in this review; CI, confidence interval; ROP, retinopathy of prematurity.
+
+```{r figure-52, echo=FALSE, fig.height=10, fig.width=7}
+rbind(
+  stacked_ori_shap_feature_values$survive_stack_dnn |>
+    mutate(target = "survival")
+  , stacked_ori_shap_feature_values$rop_severe_stack_rr |>
+    mutate(target = "rop_severe")
+  , stacked_ori_shap_feature_values$bpd_stack_rf |>
+    mutate(target = "bpd")
+  , stacked_ori_shap_feature_values$bpd_moderate_severe_stack_rf |>
+    mutate(target = "bpd_moderate_severe")
+  , stacked_ori_shap_feature_values$eugr_hc_stack_rr |>
+    mutate(target = "eugr_hc")
+  , stacked_ori_shap_feature_values$eugr_bw_stack_rr |>
+    mutate(target = "eugr_bw")
+  , stacked_ori_shap_feature_values$hearing_stack_rr |>
+    mutate(target = "hearing")
+  ) |>
+  filter(feature == "maternal_age") |>
+  mutate(
+    target = factor(target, unique(target))
+    , feature_value_group =
+      ifelse(
+        feature_value < 20
+        , "<20"
+        , ifelse(
+            feature_value >= 35
+            , "35+"
+            , paste0(
+                floor(feature_value / 5) * 5
+                , " - "
+                , (floor(feature_value / 5) * 5) + 4
+              )
+          )
+      ) |>
+      factor(c("<20", paste0(seq(20, 30, 5), " - ", seq(20, 30, 5) + 4), "35+"))
+  ) |>
+  group_by(target, feature_value_group) |>
+  summarize(
+    avg = mean(shap_value)
+    , ci = qnorm(0.975) * sd(shap_value) / sqrt(n())
+    , .groups = "drop"
+  ) |>
+  mutate(lb = avg - ci, ub = avg + ci) |>
+  ggplot(aes(factor(feature_value_group), avg)) +
+  geom_hline(yintercept = 0, lty = 2) +
+  geom_errorbar(aes(ymin = lb, ymax = ub)) +
+  geom_point() +
+  facet_wrap(~ target, scales = "free_x", ncol = 1) +
+  coord_flip() +
+  xlab("") +
+  ylab("SHAP value (95% CI)")
+```
+
+Figure 52. SHAP values of maternal age. CI, confidence interval.
 
 # Model deployment
 
@@ -6166,7 +8034,7 @@ demo_trajectories <-
   arrange(eval_type, target, t)
 ```
 
-```{r figure-26, echo=FALSE, fig.height=5, fig.width=7}
+```{r figure-53, echo=FALSE, fig.height=5, fig.width=7}
 demo_trajectories |>
   filter(eval_type == "other_outcomes_true") |>
   mutate(
@@ -6197,7 +8065,7 @@ demo_trajectories |>
   )
 ```
 
-Figure 26. A case with ~50% truly-predicted survive and ~20% truly-predicted positives for other outcomes.
+Figure 53. A case with ~50% truly-predicted survive and ~20% truly-predicted positives for other outcomes.
 
 ```{r Plot demo trajectories, include=FALSE}
 demo_trajectories_plot <-
@@ -6241,17 +8109,17 @@ demo_trajectories_plot <-
   )
 ```
 
-```{r figure-27, echo=FALSE, fig.height=3, fig.width=7}
+```{r figure-54, echo=FALSE, fig.height=3, fig.width=7}
 demo_trajectories_plot[[1]]
 ```
 
-Figure 27. Survival trajectories with ~90% truly and 1+ falsely predicted deaths and ~20% falsely predicted survive. Vertical dashed line indicates death age.
+Figure 54. Survival trajectories with ~90% truly and 1+ falsely predicted deaths and ~20% falsely predicted survive. Vertical dashed line indicates death age.
 
-```{r figure-28, echo=FALSE, fig.height=5, fig.width=7}
+```{r figure-55, echo=FALSE, fig.height=5, fig.width=7}
 demo_trajectories_plot[[2]]
 ```
 
-Figure 28. Other outcome trajectories with ~20% truly and ~20% falsely predicted outcomes among ~50% truly predicted survive.
+Figure 55. Other outcome trajectories with ~20% truly and ~20% falsely predicted outcomes among ~50% truly predicted survive.
 
 ```{r Required features, include=FALSE}
 pred_features <-
@@ -6329,7 +8197,7 @@ pred_features |>
   column_spec(1:3, extra_css = "vertical-align:top;")
 ```
 
-```{r eval=FALSE, include=FALSE}
+```{r Save deployment data, eval=FALSE, include=FALSE}
 saveRDS(dim_red_train_regression, "data/dep_dim_red_train_regression.rds")
 saveRDS(new_dimension_new_name, "data/dep_new_dimension_new_name.rds")
 dr_model$survive$baseline$`20` |>
@@ -6337,6 +8205,164 @@ dr_model$survive$baseline$`20` |>
 dr_model$survive$residual$`200` |>
   saveRDS("data/dep_dr_model_survive_residual_200.rds")
 ```
+
+```{r Connection among ventilation predictors, include=FALSE}
+multivar_reg_compiled_ventilation <-
+  list(
+    survive = survive_pred_features
+    , rop_severe = rop_severe_pred_features
+    , bpd = bpd_pred_features
+    , bpd_moderate_severe = bpd_moderate_severe_pred_features
+    , eugr_hc = eugr_hc_pred_features
+    , eugr_bw = eugr_bw_pred_features
+    , hearing = hearing_pred_features
+  ) |>
+  lapply(gather, type, used, -feature) |>
+  imap(~ mutate(., target = .y)) |>
+  reduce(rbind) |>
+  filter(used == 1) |>
+  select(-used) |>
+  mutate(
+    outcome =
+      case_when(
+        target == "survive" ~ "survive"
+        , type %in% c("baseline", "baseline1") ~ "survive"
+        , type == "baseline2" ~ target
+        , type %in% c("stack", "stack1") ~ "survive"
+        , target != "bpd_moderate_severe" & type == "stack2" ~ target
+        , target == "bpd_moderate_severe" & type == "stack2" ~ "bpd"
+        , target == "bpd_moderate_severe" & type == "stack3"
+          ~ "bpd_moderate_severe"
+      )
+  ) |>
+  left_join(
+    multivar_reg_compiled |>
+      left_join(
+        multivar_reg_compiled |>
+          select(outcome, variable, covariates) |>
+          mutate(seq = seq(n())) |>
+          separate_rows(covariates, sep = ", ") |>
+          mutate(
+            value = 1
+            , covariates = ifelse(covariates == "", "no_covariate", covariates)
+            , covariates = factor(covariates, unique(covariates))
+          ) |>
+          spread(covariates, value, fill = 0) |>
+          arrange(seq) |>
+          select(-seq, -no_covariate)
+        , by = join_by(outcome, variable)
+        , relationship = "many-to-many"
+      ) |>
+      select(-covariates) |>
+      filter(str_detect(variable, "\\*")) |>
+      mutate(feature = str_remove_all(variable, "\\*"))
+    , by = join_by(outcome, feature)
+  ) |>
+  filter(str_detect(feature, "fio2_|resp_"))
+```
+
+```{r Create graph plot based on estimated direction, include=FALSE}
+correlation_graph_plot <-
+  unique(multivar_reg_compiled_ventilation$target) |>
+  `names<-`(unique(multivar_reg_compiled_ventilation$target)) |>
+  imap(
+    ~ multivar_reg_compiled_ventilation |>
+      filter(target == .x) |>
+      select(
+        -type, -target, -outcome, -variable, -term, -OR, -LB, -UB, -p.value
+      ) |>
+      gather(from, used, -feature) |>
+      filter(used == 1) |>
+      select(-used) |>
+      rename(to = feature)
+  )
+
+correlation_graph_plot <-
+  correlation_graph_plot[sapply(correlation_graph_plot, \(x) nrow(x) > 0)] |>
+  lapply(graph_from_data_frame) |>
+  imap(
+    ~ ggnetwork(
+        .x
+        , layout = layout_as_tree(.x, root = c(), mode = "in", circular = TRUE)
+        , arrow.gap = 0.075
+      )
+  ) |>
+  imap(~ mutate(.x, outcome = .y)) |>
+  reduce(rbind) 
+
+correlation_graph_plot <-
+  correlation_graph_plot |>
+  mutate(name = str_replace_all(name, "_cum", "\n_cum")) |>
+  ggplot(aes(x, y, xend = xend, yend = yend, color = name, fill = name)) +
+  geom_edges(
+    arrow = arrow(length = unit(4, "pt"), type="closed")
+    , curvature = 0.2, linewidth = 0.5, show.legend = FALSE
+  ) +
+  geom_nodelabel(
+    aes(label = name), color = "white", size = 3, angle = 90
+    , show.legend = FALSE
+  ) +
+  facet_wrap(~ outcome, ncol = 2) +
+  scale_x_continuous(
+    limits =
+      c(min(correlation_graph_plot$x) - 0
+        ,max(correlation_graph_plot$xend) + 0
+      )
+  ) +
+  scale_y_continuous(
+    limits =
+      c(min(correlation_graph_plot$y) - 0
+        ,max(correlation_graph_plot$yend) + 0
+      )
+  ) +
+  theme_void()
+```
+
+```{r figure-56, echo=FALSE, fig.height=5, fig.width=10}
+ggarrange(
+  ggarrange(
+    NULL
+    , multivar_reg_compiled_ventilation |>
+      mutate_at(c("target", "outcome"), \(x) factor(x, unique(x))) |>
+      ggplot(aes(feature, OR)) +
+      geom_hline(yintercept = 1, lty = 2) +
+      geom_errorbar(aes(ymin = LB, ymax = UB), width = 0.2) +
+      geom_point() +
+      facet_grid(outcome ~ target, scales = "free", space = "free") +
+      coord_flip() +
+      xlab("") +
+      scale_y_continuous(
+        "OR (95% CI)", limits = c(0.85, 1.35), breaks = seq(0.75, 1.35, 0.25)
+      ) +
+      theme(
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)
+        , strip.text.y.right = element_blank()
+      )
+    , correlation_graph_plot
+    , nrow = 3, ncol = 1, heights = c(0.35, 3.5, 1.6)
+  )
+  , multivar_reg_compiled_ventilation |>
+    select(-type, -variable, -term, -OR, -LB, -UB, -p.value) |>
+    gather(feature2, covariate, -target, -outcome, -feature) |>
+    filter(str_detect(feature2, "fio2_|resp_")) |>
+    mutate_at(c("target", "outcome"), \(x) factor(x, unique(x))) |>
+    mutate(covariate = factor(ifelse(covariate == 1, "Yes", "No"))) |>
+    ggplot(aes(feature2, feature, fill = covariate)) +
+    geom_tile(color = "white") +
+    facet_grid(outcome ~ ., scales = "free", space = "free") +
+    xlab("") +
+    scale_fill_discrete("Adjustment") +
+    theme(
+      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)
+      , axis.title.y = element_blank()
+      , axis.text.y = element_blank()
+      , legend.position = "top"
+    )
+  , nrow = 1, ncol = 2, widths = c(7.5, 2.5)
+)
+```
+
+Figure 55. Connection among ventilation predictors. CI, confidence interval; OR, odds ratio.
 
 ## Severe ROP
 
