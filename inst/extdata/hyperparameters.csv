@@ -1,0 +1,18 @@
+name,algorithm,explainer,hyperparameter,possible_value
+RR,LogisticRegression,shap.LinearExplainer,penalty,l2
+RR,LogisticRegression,shap.LinearExplainer,solver,lbfgs
+RR,LogisticRegression,shap.LinearExplainer,max_iter,1000
+RR,LogisticRegression,shap.LinearExplainer,C,"np.logspace(-4, 4, 10)"
+RF,RandomForestClassifier,shap.TreeExplainer,min_samples_split,20
+RF,RandomForestClassifier,shap.TreeExplainer,max_features,None
+RF,RandomForestClassifier,shap.TreeExplainer,n_estimators,"[100, 200, 300]"
+RF,RandomForestClassifier,shap.TreeExplainer,max_depth,"[3, 5, 10]"
+GBM,GradientBoostingClassifier,shap.TreeExplainer,learning_rate,0.01
+GBM,GradientBoostingClassifier,shap.TreeExplainer,n_estimators,"[100, 200, 300]"
+GBM,GradientBoostingClassifier,shap.TreeExplainer,max_depth,"[3, 5, 10]"
+DNN,MLPClassifier,shap.KernelExplainer,max_iter,1000
+DNN,MLPClassifier,shap.KernelExplainer,hidden_layer_sizes,"(50, 50)"
+DNN,MLPClassifier,shap.KernelExplainer,activation,relu
+DNN,MLPClassifier,shap.KernelExplainer,solver,sgd
+DNN,MLPClassifier,shap.KernelExplainer,learning_rate_init,0.001
+DNN,MLPClassifier,shap.KernelExplainer,alpha,"np.logspace(-4, 4, 10)"
