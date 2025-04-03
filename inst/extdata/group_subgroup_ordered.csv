@@ -1,0 +1,23 @@
+group,subgroup,order
+Prenatal,Demographics,1
+Prenatal,Pregnancy care,2
+At birth,Anthropometrics,6
+At birth,Apgar scores,4
+At birth,Birth time,1
+At birth,Gestational age,2
+At birth,Intervention,5
+At birth,Sex,3
+Daily,Altered hemodynamics,2
+Daily,Feeding,3
+Occasional,Age of death,4
+Occasional,Comorbidities,2
+Occasional,Infection,1
+Occasional,Survival,3
+Weekly,Growth dynamics,1
+Weekly,IMV trajectory,3
+Weekly,Postnatal steroid,2
+Postmenstrual age 36 w,Moderate/severe BPD,2
+Postmenstrual age 36 w,Severe ROP,1
+Term-equivalent age,EUGR-BW,1
+Term-equivalent age,EUGR-HC,2
+Discharge,Failed to pass hearing screening,1
