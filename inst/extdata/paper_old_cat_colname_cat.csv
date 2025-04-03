@@ -1,0 +1,124 @@
+old_colname,new_colname,old_cat,new_cat,group,subgroup
+as1,NA,0,NA,NA,NA
+as1,NA,1,NA,NA,NA
+as1,NA,2,NA,NA,NA
+as1,NA,4,NA,NA,NA
+as5,NA,0,NA,NA,NA
+as5,NA,1,NA,NA,NA
+as5,NA,2,NA,NA,NA
+as5,NA,4,NA,NA,NA
+bbw_z,NA,0,NA,NA,NA
+bbw_z,NA,2,NA,NA,NA
+bbw_z,NA,4,NA,NA,NA
+bhc_z,NA,0,NA,NA,NA
+bhc_z,NA,2,NA,NA,NA
+bhc_z,NA,4,NA,NA,NA
+birthtime_day,NA,0-no,NA,NA,NA
+birthtime_day,NA,1-yes,NA,NA,NA
+birthtime_evening,NA,0-no,NA,NA,NA
+birthtime_evening,NA,1-yes,NA,NA,NA
+birthtime_night,NA,0-no,NA,NA,NA
+birthtime_night,NA,1-yes,NA,NA,NA
+bpd,NA,0-no,NA,NA,NA
+bpd,NA,1-yes,NA,NA,NA
+bpd,NA,NA,NA,NA,NA
+bpd_moderate_severe,NA,0-no,NA,NA,NA
+bpd_moderate_severe,NA,1-yes,NA,NA,NA
+bpd_moderate_severe,NA,NA,NA,NA,NA
+chorioamnionitis,NA,0-no,NA,NA,NA
+chorioamnionitis,NA,1-yes,NA,NA,NA
+cs,NA,0-no,NA,NA,NA
+cs,NA,1-yes,NA,NA,NA
+education_status,NA,0-high,NA,NA,NA
+education_status,NA,1-low,NA,NA,NA
+eugr_bw,NA,0-BW z-score at birth >=-1.5,NA,NA,NA
+eugr_bw,NA,1-BW z-score at birth <-1.5,NA,NA,NA
+eugr_bw,NA,NA,NA,NA,NA
+eugr_hc,NA,0-HC z-score at birth >=-1.5,NA,NA,NA
+eugr_hc,NA,1-HC z-score at birth <-1.5,NA,NA,NA
+eugr_hc,NA,NA,NA,NA,NA
+gdm,NA,0-no,NA,NA,NA
+gdm,NA,1-yes,NA,NA,NA
+hearing,NA,0-passed,NA,NA,NA
+hearing,NA,1-failed,NA,NA,NA
+hearing,NA,NA,NA,NA,NA
+ivf,NA,0-no,NA,NA,NA
+ivf,NA,1-yes,NA,NA,NA
+multiple_gestation,NA,0-no,NA,NA,NA
+multiple_gestation,NA,1-yes,NA,NA,NA
+pe,NA,0-no,NA,NA,NA
+pe,NA,1-yes,NA,NA,NA
+resuscitation_at_birth,NA,0,NA,NA,NA
+resuscitation_at_birth,NA,6,NA,NA,NA
+rop_severe,NA,0-none/stage I/stage II,NA,NA,NA
+rop_severe,NA,1-stage II+,NA,NA,NA
+rop_severe,NA,NA,NA,NA,NA
+sex,NA,0-female,NA,NA,NA
+sex,NA,1-male,NA,NA,NA
+socioeconomic_status,NA,1-high,NA,NA,NA
+socioeconomic_status,NA,2-medium,NA,NA,NA
+socioeconomic_status,NA,3-low,NA,NA,NA
+steroid_antenatal,NA,0,NA,NA,NA
+steroid_antenatal,NA,2,NA,NA,NA
+steroid_antenatal,NA,4,NA,NA,NA
+surfactant,NA,0,NA,NA,NA
+surfactant,NA,2,NA,NA,NA
+survive,NA,0-no,NA,NA,NA
+survive,NA,1-yes,NA,NA,NA
+aki,NA,0,NA,NA,NA
+aki,NA,2,NA,NA,NA
+aki,NA,4,NA,NA,NA
+aki,NA,6,NA,NA,NA
+blood_culture,NA,0,NA,NA,NA
+blood_culture,NA,2,NA,NA,NA
+blood_culture,NA,6,NA,NA,NA
+blood_volume,NA,0,NA,NA,NA
+blood_volume,NA,4,NA,NA,NA
+blood_volume,NA,6,NA,NA,NA
+bw_z_qw,NA,0-BW z-score >-1,NA,NA,NA
+bw_z_qw,NA,1-BW z-score <=-1,NA,NA,NA
+cerebellar_hemorrhage,NA,1-no bleeding,NA,NA,NA
+cerebellar_hemorrhage,NA,3-severe bleeding,NA,NA,NA
+feeding,NA,0,NA,NA,NA
+feeding,NA,1,NA,NA,NA
+feeding,NA,2,NA,NA,NA
+feeding,NA,3,NA,NA,NA
+feeding,NA,4,NA,NA,NA
+feeding,NA,5,NA,NA,NA
+feeding,NA,6,NA,NA,NA
+hc_z_qw,NA,0-HC z-score >-1,NA,NA,NA
+hc_z_qw,NA,1-HC z-score <=-1,NA,NA,NA
+inotropic,NA,0,NA,NA,NA
+inotropic,NA,2,NA,NA,NA
+inotropic,NA,4,NA,NA,NA
+inotropic,NA,6,NA,NA,NA
+ischaemic_stroke,NA,0-no ischemia,NA,NA,NA
+ischaemic_stroke,NA,1-ischemia,NA,NA,NA
+ivh,NA,0-no IVH,NA,NA,NA
+ivh,NA,1-IVH,NA,NA,NA
+nec,NA,0,NA,NA,NA
+nec,NA,2,NA,NA,NA
+nec,NA,3,NA,NA,NA
+nec,NA,4,NA,NA,NA
+nec,NA,5,NA,NA,NA
+nec,NA,6,NA,NA,NA
+non_nec_surg_abd,NA,"0-no NEC/NEC, no surgery",NA,NA,NA
+non_nec_surg_abd,NA,1-NEC with surgery,NA,NA,NA
+pda_medical,NA,0-no,NA,NA,NA
+pda_medical,NA,1-yes,NA,NA,NA
+pda_surgical,NA,0-no,NA,NA,NA
+pda_surgical,NA,1-yes,NA,NA,NA
+plt,NA,0,NA,NA,NA
+plt,NA,1,NA,NA,NA
+plt,NA,2,NA,NA,NA
+plt,NA,4,NA,NA,NA
+plt,NA,6,NA,NA,NA
+pvl,NA,0-no PVL,NA,NA,NA
+pvl,NA,1-PVL,NA,NA,NA
+steroid_postnatal,NA,0,NA,NA,NA
+steroid_postnatal,NA,2,NA,NA,NA
+transfusion,NA,0,NA,NA,NA
+transfusion,NA,2,NA,NA,NA
+wbc,NA,0,NA,NA,NA
+wbc,NA,2,NA,NA,NA
+wbc,NA,4,NA,NA,NA

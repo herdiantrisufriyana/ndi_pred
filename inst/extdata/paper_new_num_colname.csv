@@ -1,0 +1,11 @@
+old_colname,new_colname,group,subgroup
+death_age,Age of death (day),Occasional,Age of death
+ga_wk,Gestational age (week),At birth,Gestational age
+gravida,Gradividity,Prenatal,Pregnancy care
+maternal_age,Maternal age (year),Prenatal,Demographics
+fio2_cum_day_pct,Cumulative O2 exposure duration (percentile),Weekly,IMV trajectory
+fio2_cum_day_qw,Cumulative O2 exposure duration (day),Weekly,IMV trajectory
+fio2_cum_level_pct,Cumulative O2 exposure concentration (percentile),Weekly,IMV trajectory
+fio2_cum_level_qw,Cumulative O2 exposure concentration (day),Weekly,IMV trajectory
+resp_supp_agg_cum_day_pct,Cumulative IMV exposure (percentile),Weekly,IMV trajectory
+resp_supp_agg_cum_day_qw,Cumulative IMV exposure (day),Weekly,IMV trajectory

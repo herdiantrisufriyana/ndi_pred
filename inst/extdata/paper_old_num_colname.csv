@@ -1,0 +1,11 @@
+old_colname,new_colname,group,subgroup
+death_age,NA,NA,NA
+ga_wk,NA,NA,NA
+gravida,NA,NA,NA
+maternal_age,NA,NA,NA
+fio2_cum_day_pct,NA,NA,NA
+fio2_cum_day_qw,NA,NA,NA
+fio2_cum_level_pct,NA,NA,NA
+fio2_cum_level_qw,NA,NA,NA
+resp_supp_agg_cum_day_pct,NA,NA,NA
+resp_supp_agg_cum_day_qw,NA,NA,NA

@@ -1,0 +1,124 @@
+old_colname,new_colname,old_cat,new_cat,group,subgroup
+as1,Apgar score 1 min after birth (scale),0,3 (0),At birth,Apgar scores
+as1,Apgar score 1 min after birth (scale),1,4-5 (1),At birth,Apgar scores
+as1,Apgar score 1 min after birth (scale),2,6-7 (2),At birth,Apgar scores
+as1,Apgar score 1 min after birth (scale),4,8-10 (4),At birth,Apgar scores
+as5,Apgar score 5 mins after birth (scale),0,3 (0),At birth,Apgar scores
+as5,Apgar score 5 mins after birth (scale),1,4-5 (1),At birth,Apgar scores
+as5,Apgar score 5 mins after birth (scale),2,6-7 (2),At birth,Apgar scores
+as5,Apgar score 5 mins after birth (scale),4,8-10 (4),At birth,Apgar scores
+bbw_z,Birth body weight Z-score (scale),0,≤-2 (0),At birth,Anthropometrics
+bbw_z,Birth body weight Z-score (scale),2,>-2 & ≤-1.28 (2),At birth,Anthropometrics
+bbw_z,Birth body weight Z-score (scale),4,>-1.28 (4),At birth,Anthropometrics
+bhc_z,Birth head circumference Z-score (scale),0,≤-2 (0),At birth,Anthropometrics
+bhc_z,Birth head circumference Z-score (scale),2,>-2 & ≤-1.28 (2),At birth,Anthropometrics
+bhc_z,Birth head circumference Z-score (scale),4,>-1.28 (4),At birth,Anthropometrics
+birthtime_day,Birth time (scale),0-no,,At birth,Birth time
+birthtime_day,Birth time (scale),1-yes,08:00-16:59 (1),At birth,Birth time
+birthtime_evening,Birth time (scale),0-no,,At birth,Birth time
+birthtime_evening,Birth time (scale),1-yes,17:00-23:59 (2),At birth,Birth time
+birthtime_night,Birth time (scale),0-no,,At birth,Birth time
+birthtime_night,Birth time (scale),1-yes,00:00-07:59 (3),At birth,Birth time
+bpd,BPD,0-no,No,Postmenstrual age 36 w,Moderate/severe BPD
+bpd,BPD,1-yes,Yes,Postmenstrual age 36 w,Moderate/severe BPD
+bpd,BPD,NA,Missing,Postmenstrual age 36 w,Moderate/severe BPD
+bpd_moderate_severe,Moderate/severe BPD,0-no,No,Postmenstrual age 36 w,Moderate/severe BPD
+bpd_moderate_severe,Moderate/severe BPD,1-yes,Yes,Postmenstrual age 36 w,Moderate/severe BPD
+bpd_moderate_severe,Moderate/severe BPD,NA,Missing,Postmenstrual age 36 w,Moderate/severe BPD
+chorioamnionitis,Chorioamnionitis,0-no,No,Prenatal,Pregnancy care
+chorioamnionitis,Chorioamnionitis,1-yes,Yes,Prenatal,Pregnancy care
+cs,Cesarean section,0-no,No,Prenatal,Pregnancy care
+cs,Cesarean section,1-yes,Yes,Prenatal,Pregnancy care
+education_status,Low maternal education,1-low,Yes,Prenatal,Demographics
+education_status,Low maternal education,0-high,No,Prenatal,Demographics
+eugr_bw,EUGR-BW,0-BW z-score at birth >=-1.5,No,Term-equivalent age,EUGR-BW
+eugr_bw,EUGR-BW,1-BW z-score at birth <-1.5,Yes,Term-equivalent age,EUGR-BW
+eugr_bw,EUGR-BW,NA,Missing,Term-equivalent age,EUGR-BW
+eugr_hc,EUGR-HC,0-HC z-score at birth >=-1.5,No,Term-equivalent age,EUGR-HC
+eugr_hc,EUGR-HC,1-HC z-score at birth <-1.5,Yes,Term-equivalent age,EUGR-HC
+eugr_hc,EUGR-HC,NA,Missing,Term-equivalent age,EUGR-HC
+gdm,GDM,0-no,No,Prenatal,Pregnancy care
+gdm,GDM,1-yes,Yes,Prenatal,Pregnancy care
+hearing,Failed to pass hearing screening,0-passed,No,Discharge,Failed to pass hearing screening
+hearing,Failed to pass hearing screening,1-failed,Yes,Discharge,Failed to pass hearing screening
+hearing,Failed to pass hearing screening,NA,Missing,Discharge,Failed to pass hearing screening
+ivf,IVF,0-no,No,Prenatal,Pregnancy care
+ivf,IVF,1-yes,Yes,Prenatal,Pregnancy care
+multiple_gestation,Multiple gestation,0-no,No,Prenatal,Pregnancy care
+multiple_gestation,Multiple gestation,1-yes,Yes,Prenatal,Pregnancy care
+pe,Preeclampsia,0-no,No,Prenatal,Pregnancy care
+pe,Preeclampsia,1-yes,Yes,Prenatal,Pregnancy care
+resuscitation_at_birth,Resuscitation at birth (scale),0,No (0),At birth,Intervention
+resuscitation_at_birth,Resuscitation at birth (scale),6,Yes (6),At birth,Intervention
+rop_severe,Severe ROP,0-none/stage I/stage II,No,Postmenstrual age 36 w,Severe ROP
+rop_severe,Severe ROP,1-stage II+,Yes,Postmenstrual age 36 w,Severe ROP
+rop_severe,Severe ROP,NA,Missing,Postmenstrual age 36 w,Severe ROP
+sex,Sex,0-female,Female,At birth,Sex
+sex,Sex,1-male,Male,At birth,Sex
+socioeconomic_status,Socieconomic status,1-high,Grades 1-2 (high),Prenatal,Demographics
+socioeconomic_status,Socieconomic status,2-medium,Grades 3 (middle),Prenatal,Demographics
+socioeconomic_status,Socieconomic status,3-low,Grades 4-5 (low),Prenatal,Demographics
+steroid_antenatal,Antenatal steroid (scale),0,No (0),Prenatal,Pregnancy care
+steroid_antenatal,Antenatal steroid (scale),2,1 dose (2),Prenatal,Pregnancy care
+steroid_antenatal,Antenatal steroid (scale),4,2 doses (4),Prenatal,Pregnancy care
+surfactant,Surfactant therapy (scale),0,No (0),At birth,Intervention
+surfactant,Surfactant therapy (scale),2,Yes (2),At birth,Intervention
+survive,Survival,0-no,No,Occasional,Survival
+survive,Survival,1-yes,Yes,Occasional,Survival
+aki,AKI (scale),0,No AKI (0),Occasional,Comorbidities
+aki,AKI (scale),2,AKI stage 1 (2),Occasional,Comorbidities
+aki,AKI (scale),4,AKI stage 2 (4),Occasional,Comorbidities
+aki,AKI (scale),6,AKI stage 3 (6),Occasional,Comorbidities
+blood_culture,Blood culture (scale),0,No blood culture (0),Occasional,Infection
+blood_culture,Blood culture (scale),2,"Blood culture available but negative, except the first set of cultures on the day of birth (2)",Occasional,Infection
+blood_culture,Blood culture (scale),6,Blood culture positive (6),Occasional,Infection
+blood_volume,Blood expander (scale),0,Neither albumin nor FFP (0),Daily,Altered hemodynamics
+blood_volume,Blood expander (scale),4,Either albumin or FFP (4),Daily,Altered hemodynamics
+blood_volume,Blood expander (scale),6,Both albumin and FFP (6),Daily,Altered hemodynamics
+bw_z_qw,Postnatal body weight,0-BW z-score >-1,Z-score >-1,Weekly,Growth dynamics
+bw_z_qw,Postnatal body weight,1-BW z-score <=-1,Z-score ≤-1,Weekly,Growth dynamics
+cerebellar_hemorrhage,Severe cerebellar hemorrhage,1-no bleeding,No,Occasional,Comorbidities
+cerebellar_hemorrhage,Severe cerebellar hemorrhage,3-severe bleeding,Yes,Occasional,Comorbidities
+feeding,% of full feeding (scale),0,Fasting (0),Daily,Feeding
+feeding,% of full feeding (scale),1,>0% & <30% of full feeding (1),Daily,Feeding
+feeding,% of full feeding (scale),2,≥30% & <50% of full feeding (2),Daily,Feeding
+feeding,% of full feeding (scale),3,≥50% & <70% of full feeding (3),Daily,Feeding
+feeding,% of full feeding (scale),4,≥70% & <80% of full feeding (4),Daily,Feeding
+feeding,% of full feeding (scale),5,≥80% & <90% of full feeding (5),Daily,Feeding
+feeding,% of full feeding (scale),6,≥90% of full feeding (6),Daily,Feeding
+hc_z_qw,Postnatal head circumference,0-HC z-score >-1,Z-score >-1,Weekly,Growth dynamics
+hc_z_qw,Postnatal head circumference,1-HC z-score <=-1,Z-score ≤-1,Weekly,Growth dynamics
+inotropic,Inotropic (scale),0,No inotropic use (0),Daily,Altered hemodynamics
+inotropic,Inotropic (scale),2,Either dopamine or dobutamine (2),Daily,Altered hemodynamics
+inotropic,Inotropic (scale),4,Both dopamine and dobutamine (4),Daily,Altered hemodynamics
+inotropic,Inotropic (scale),6,Either epinephrine or norepinephrine (6),Daily,Altered hemodynamics
+ischaemic_stroke,Ischemic stroke,0-no ischemia,No,Occasional,Comorbidities
+ischaemic_stroke,Ischemic stroke,1-ischemia,Yes,Occasional,Comorbidities
+ivh,IVH,0-no IVH,No,Occasional,Comorbidities
+ivh,IVH,1-IVH,Yes,Occasional,Comorbidities
+nec,NEC (scale),0,No NEC (0),Occasional,Comorbidities
+nec,NEC (scale),2,NEC stage 1 (2),Occasional,Comorbidities
+nec,NEC (scale),3,NEC stage 2a (3),Occasional,Comorbidities
+nec,NEC (scale),4,NEC stage 2b (4),Occasional,Comorbidities
+nec,NEC (scale),5,NEC stage 3a (5),Occasional,Comorbidities
+nec,NEC (scale),6,NEC stage 3b (6),Occasional,Comorbidities
+non_nec_surg_abd,SIP/meconium ileus/volvulus/obstruction,"0-no NEC/NEC, no surgery",No,Occasional,Comorbidities
+non_nec_surg_abd,SIP/meconium ileus/volvulus/obstruction,1-NEC with surgery,Yes,Occasional,Comorbidities
+pda_medical,hs-PDA requiring medication only,0-no,No,Occasional,Comorbidities
+pda_medical,hs-PDA requiring medication only,1-yes,Yes,Occasional,Comorbidities
+pda_surgical,hs-PDA requiring ligation,0-no,No,Occasional,Comorbidities
+pda_surgical,hs-PDA requiring ligation,1-yes,Yes,Occasional,Comorbidities
+plt,Thrombocytopenia (scale),0,">150,000 (0)",Occasional,Infection
+plt,Thrombocytopenia (scale),1,">100,000 to 150,000 (1)",Occasional,Infection
+plt,Thrombocytopenia (scale),2,">50,000 to 100,000 (2)",Occasional,Infection
+plt,Thrombocytopenia (scale),4,">10,000 to 50,000 (4)",Occasional,Infection
+plt,Thrombocytopenia (scale),6,"≤10,000 (6)",Occasional,Infection
+pvl,PVL,0-no PVL,No,Occasional,Comorbidities
+pvl,PVL,1-PVL,Yes,Occasional,Comorbidities
+steroid_postnatal,Postnatal steroid (scale),0,No (0),Weekly,Postnatal steroid
+steroid_postnatal,Postnatal steroid (scale),2,Yes (2),Weekly,Postnatal steroid
+transfusion,PRBC transfusion (scale),0,No (0),Daily,Altered hemodynamics
+transfusion,PRBC transfusion (scale),2,Yes (2),Daily,Altered hemodynamics
+wbc,Leukopenia (scale),0,>5000 (0),Occasional,Infection
+wbc,Leukopenia (scale),2,>3000 to 5000 (2),Occasional,Infection
+wbc,Leukopenia (scale),4,≤3000 (4),Occasional,Infection
