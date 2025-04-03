@@ -6085,7 +6085,7 @@ ori_shap_feature_values <-
   imap(~ obtain_old_dim_shap_values_if_any(.x, .y))
 ```
 
-```{r Chain back SHAP values across stacked models, include=FALSE}
+```{r Chain back SHAP across stacked models- create, include=FALSE}
 stacked_ori_shap_feature_values <-
   list(
     survive_baseline1_rr = ori_shap_feature_values$survive_baseline1_rr
@@ -6203,10 +6203,11 @@ th$survive_baseline1_rr
 eval_plot$survive_baseline1_rr <-
   lapply(eval, \(x) x$survive_baseline1_rr$test) |>
   arrange_eval_plot(
-    shap_feature_values = stacked_ori_shap_feature_values$survive_baseline1_rr
+    shap_beeswarm_plot_obj =
+      stacked_ori_shap_feature_values$survive_baseline1_rr |>
+      shap_beeswarm_plot(1, Inf, seed, 0.75)
     , threshold = th$survive_baseline1_rr
     , dc_xby = 0.1, dc_yby = 0.1, dc_ta_angle = -60
-    , seed = seed
   )
 ```
 
@@ -6244,12 +6245,12 @@ survive_stack_eval_discrimination$survive_stack_dnn$validation$plot$data |>
 eval_plot$survive_stack_dnn <-
   lapply(eval, \(x) x$survive_stack_dnn$test) |>
   arrange_eval_plot(
-    shap_feature_values = stacked_ori_shap_feature_values$survive_stack_dnn
+    shap_beeswarm_plot_obj =
+      stacked_ori_shap_feature_values$survive_stack_dnn |>
+      shap_beeswarm_plot(1, Inf, seed, 0.75)
     , threshold = th$survive_stack_dnn
     , dc_xby = 0.1, dc_yby = 0.1
     , dc_ta_angle = -60
-    , seed = seed
-    , transparency = 0.05
     , shap_height = 3.5
   )
 ```
@@ -6350,13 +6351,13 @@ rop_severe_stack_eval_discrimination$rop_severe_stack_rr$validation$plot$data |>
 eval_plot$rop_severe_stack_rr <-
   lapply(eval, \(x) x$rop_severe_stack_rr$test) |>
   arrange_eval_plot(
-    shap_feature_values = stacked_ori_shap_feature_values$rop_severe_stack_rr
+    shap_beeswarm_plot_obj =
+      stacked_ori_shap_feature_values$rop_severe_stack_rr |>
+      shap_beeswarm_plot(1, Inf, seed, 0.75)
     , threshold = th$rop_severe_stack_rr
     , dc_xmax = 0.6, dc_xby = 0.1
     , dc_ymax = 0.15, dc_yby = 0.01
     , dc_ta_angle = -80
-    , seed = seed
-    , transparency = 0.05
     , shap_height = 4
   )
 ```
@@ -6461,13 +6462,13 @@ bpd_stack_eval_discrimination$bpd_stack_rf$validation$plot$data |>
 eval_plot$bpd_stack_rf <-
   lapply(eval, \(x) x$bpd_stack_rf$test) |>
   arrange_eval_plot(
-    shap_feature_values = stacked_ori_shap_feature_values$bpd_stack_rf
+    shap_beeswarm_plot_obj =
+      stacked_ori_shap_feature_values$bpd_stack_rf |>
+      shap_beeswarm_plot(1, Inf, seed, 0.75)
     , threshold = th$bpd_stack_rf
     , dc_xmax = 0.6, dc_xby = 0.1
     , dc_ymax = 0.35, dc_yby = 0.05
     , dc_ta_angle = -70
-    , seed = seed
-    , transparency = 0.05
     , shap_height = 3
   )
 ```
@@ -6574,14 +6575,13 @@ bpd_moderate_severe_stack_eval_discrimination[[
 eval_plot$bpd_moderate_severe_stack_rf <-
   lapply(eval, \(x) x$bpd_moderate_severe_stack_rf$test) |>
   arrange_eval_plot(
-    shap_feature_values =
-      stacked_ori_shap_feature_values$bpd_moderate_severe_stack_rf
+    shap_beeswarm_plot_obj =
+      stacked_ori_shap_feature_values$bpd_moderate_severe_stack_rf |>
+      shap_beeswarm_plot(1, Inf, seed, 0.75)
     , threshold = th$bpd_moderate_severe_stack_rf
     , dc_xmax = 0.6, dc_xby = 0.1
     , dc_ymax = 0.35, dc_yby = 0.05
     , dc_ta_angle = -70
-    , seed = seed
-    , transparency = 0.05
     , shap_height = 3.5
   )
 ```
@@ -6681,12 +6681,13 @@ th$eugr_hc_baseline2_rr
 eval_plot$eugr_hc_baseline2_rr <-
   lapply(eval, \(x) x$eugr_hc_baseline2_rr$test) |>
   arrange_eval_plot(
-    shap_feature_values = stacked_ori_shap_feature_values$eugr_hc_baseline2_rr
+    shap_beeswarm_plot_obj =
+      stacked_ori_shap_feature_values$eugr_hc_baseline2_rr |>
+      shap_beeswarm_plot(1, Inf, seed, 0.75)
     , threshold = th$eugr_hc_baseline2_rr
     , dc_xmax = 0.6, dc_xby = 0.1
     , dc_ymax = 0.3, dc_yby = 0.05
     , dc_ta_angle = -75
-    , seed = seed
   )
 ```
 
@@ -6724,13 +6725,13 @@ eugr_hc_stack_eval_discrimination$eugr_hc_stack_rr$validation$plot$data |>
 eval_plot$eugr_hc_stack_rr <-
   lapply(eval, \(x) x$eugr_hc_stack_rr$test) |>
   arrange_eval_plot(
-    shap_feature_values = stacked_ori_shap_feature_values$eugr_hc_stack_rr
+    shap_beeswarm_plot_obj =
+      stacked_ori_shap_feature_values$eugr_hc_stack_rr |>
+      shap_beeswarm_plot(1, Inf, seed, 0.75)
     , threshold = th$eugr_hc_stack_rr
     , dc_xmax = 0.6, dc_xby = 0.1
     , dc_ymax = 0.3, dc_yby = 0.05
     , dc_ta_angle = -75
-    , seed = seed
-    , transparency = 0.05
     , shap_height = 4
   )
 ```
@@ -6829,12 +6830,13 @@ th$eugr_bw_baseline2_rr
 eval_plot$eugr_bw_baseline2_rr <-
   lapply(eval, \(x) x$eugr_bw_baseline2_rr$test) |>
   arrange_eval_plot(
-    shap_feature_values = stacked_ori_shap_feature_values$eugr_bw_baseline2_rr
+    shap_beeswarm_plot_obj =
+      stacked_ori_shap_feature_values$eugr_bw_baseline2_rr |>
+      shap_beeswarm_plot(1, Inf, seed, 0.75)
     , threshold = th$eugr_bw_baseline2_rr
     , dc_xmax = 0.4, dc_xby = 0.1
     , dc_ymax = 0.25, dc_yby = 0.05
     , dc_ta_angle = -75
-    , seed = seed
   )
 ```
 
@@ -6872,13 +6874,13 @@ eugr_bw_stack_eval_discrimination$eugr_bw_stack_rr$validation$plot$data |>
 eval_plot$eugr_bw_stack_rr <-
   lapply(eval, \(x) x$eugr_bw_stack_rr$test) |>
   arrange_eval_plot(
-    shap_feature_values = stacked_ori_shap_feature_values$eugr_bw_stack_rr
+    shap_beeswarm_plot_obj =
+      stacked_ori_shap_feature_values$eugr_bw_stack_rr |>
+      shap_beeswarm_plot(1, Inf, seed, 0.75)
     , threshold = th$eugr_bw_stack_rr
     , dc_xmax = 0.6, dc_xby = 0.1
     , dc_ymax = 0.25, dc_yby = 0.05
     , dc_ta_angle = -80
-    , seed = seed
-    , transparency = 0.05
     , shap_height = 4
   )
 ```
@@ -6986,13 +6988,13 @@ hearing_stack_eval_discrimination$hearing_stack_rr$validation$plot$data |>
 eval_plot$hearing_stack_rr <-
   lapply(eval, \(x) x$hearing_stack_rr$test) |>
   arrange_eval_plot(
-    shap_feature_values = stacked_ori_shap_feature_values$hearing_stack_rr
+    shap_beeswarm_plot_obj =
+      stacked_ori_shap_feature_values$hearing_stack_rr |>
+      shap_beeswarm_plot(1, Inf, seed, 0.75)
     , threshold = th$hearing_stack_rr
     , dc_xmax = 0.3, dc_xby = 0.1
     , dc_ymax = 0.12, dc_yby = 0.02
     , dc_ta_angle = -80
-    , seed = seed
-    , transparency = 0.05
     , shap_height = 3.5
   )
 ```
@@ -7468,7 +7470,7 @@ cm_selected_time_summary_indep_test <-
   select(outcome, metric, avg, everything())
 ```
 
-```{r figure-41, fig.height=3.5, fig.width=7}
+```{r figure-41, echo=FALSE, fig.height=3.5, fig.width=7}
 mutate(cm_selected_time_summary_val, set = "Validation") |>
   rbind(mutate(cm_selected_time_summary, set = "Test")) |>
   timing_selection_plot("survive", "t_7")
@@ -7476,7 +7478,7 @@ mutate(cm_selected_time_summary_val, set = "Validation") |>
 
 Figure 41. Performance for predicting survival at particular time using the chosen threshold. The best timing was selected according to TPR and PPV using validation set. PPV, positive predictive value or precision; TPR, true positive rate or sensitivity.
 
-```{r figure-42, fig.height=5, fig.width=7}
+```{r figure-42, echo=FALSE, fig.height=5, fig.width=7}
 mutate(cm_selected_time_summary_val, set = "Validation") |>
   rbind(mutate(cm_selected_time_summary, set = "Test")) |>
   timing_selection_plot("rop_severe", "t_14")
@@ -7484,7 +7486,7 @@ mutate(cm_selected_time_summary_val, set = "Validation") |>
 
 Figure 42. Performance for predicting severe ROP at particular time using the chosen threshold. The best timing was selected according to TPR, TNR, and NPV using validation set. NPV, negative predictive value; ROP, retinopathy of prematurity; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity.
 
-```{r figure-43, fig.height=5, fig.width=7}
+```{r figure-43, echo=FALSE, fig.height=5, fig.width=7}
 mutate(cm_selected_time_summary_val, set = "Validation") |>
   rbind(mutate(cm_selected_time_summary, set = "Test")) |>
   timing_selection_plot("bpd", "t_28")
@@ -7492,7 +7494,7 @@ mutate(cm_selected_time_summary_val, set = "Validation") |>
 
 Figure 43. Performance for predicting BPD at particular time using the chosen threshold. The best timing was selected according to TPR, TNR, and NPV using validation set. BPD, bronchopulmonary disease; NPV, negative predictive value; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity.
 
-```{r figure-44, fig.height=5, fig.width=7}
+```{r figure-44, echo=FALSE, fig.height=5, fig.width=7}
 mutate(cm_selected_time_summary_val, set = "Validation") |>
   rbind(mutate(cm_selected_time_summary, set = "Test")) |>
   timing_selection_plot("bpd_moderate_severe", "t_28")
@@ -7500,7 +7502,7 @@ mutate(cm_selected_time_summary_val, set = "Validation") |>
 
 Figure 44. Performance for predicting moderate-to-severe BPD at particular time using the chosen threshold. The best timing was selected according to TPR, TNR, and NPV using validation set. BPD, bronchopulmonary disease; NPV, negative predictive value; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity.
 
-```{r figure-45, fig.height=5, fig.width=7}
+```{r figure-45, echo=FALSE, fig.height=5, fig.width=7}
 mutate(cm_selected_time_summary_val, set = "Validation") |>
   rbind(mutate(cm_selected_time_summary, set = "Test")) |>
   timing_selection_plot("eugr_hc", "t_28")
@@ -7508,7 +7510,7 @@ mutate(cm_selected_time_summary_val, set = "Validation") |>
 
 Figure 45. Performance for predicting EUGR-HC at particular time using the chosen threshold. The best timing was selected according to TPR, PPV, TNR, and NPV using validation set. EUGR-HC, extrauterine growth restriction by head circumference; NPV, negative predictive value; PPV, positive predictive value or precision; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity.
 
-```{r figure-46, fig.height=5, fig.width=7}
+```{r figure-46, echo=FALSE, fig.height=5, fig.width=7}
 mutate(cm_selected_time_summary_val, set = "Validation") |>
   rbind(mutate(cm_selected_time_summary, set = "Test")) |>
   timing_selection_plot("eugr_bw", "t_14")
@@ -7516,7 +7518,7 @@ mutate(cm_selected_time_summary_val, set = "Validation") |>
 
 Figure 46. Performance for predicting EUGR-BW at particular time using the chosen threshold. The best timing was selected according to TPR and NPV using validation set. EUGR-BW, extrauterine growth restriction by body weight; NPV, negative predictive value; TPR, true positive rate or sensitivity.
 
-```{r figure-47, fig.height=5, fig.width=7}
+```{r figure-47, echo=FALSE, fig.height=5, fig.width=7}
 mutate(cm_selected_time_summary_val, set = "Validation") |>
   rbind(mutate(cm_selected_time_summary, set = "Test")) |>
   timing_selection_plot("hearing", "t_14")
@@ -7524,7 +7526,7 @@ mutate(cm_selected_time_summary_val, set = "Validation") |>
 
 Figure 47. Performance for predicting failed hearing test at particular time using the chosen threshold. The best timing was selected according to TPR, TNR, and NPV using validation set. NPV, negative predictive value; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity.
 
-```{r figure-48, echo=FALSE, fig.height=5, fig.width=7}
+```{r Create figure-48, include=FALSE}
 figure48 <-
   mutate(cm_selected_time_summary, set = "Test") |>
   rbind(
@@ -7533,7 +7535,8 @@ figure48 <-
   timing_selection_plot(show_plot = FALSE) |>
   timing_selection_filter()
 
-figure48 |>
+figure48 <-
+  figure48 |>
   filter(set == "Independent test") |>
   left_join(
     figure48 |>
@@ -7551,7 +7554,11 @@ figure48 |>
   mutate(lower = factor(ifelse(ub < -0.05, "Yes", "No"), c("Yes", "No"))) |>
   mutate(outcome = paste0(outcome, "\n", timing)) |>
   mutate(outcome = factor(outcome, unique(outcome))) |>
-  mutate(metric = factor(metric, rev(c("TPR", "PPV", "F1", "TNR", "NPV")))) |>
+  mutate(metric = factor(metric, rev(c("TPR", "PPV", "F1", "TNR", "NPV"))))
+```
+
+```{r figure-48, echo=FALSE, fig.height=5, fig.width=7}
+figure48 |>
   ggplot(aes(metric, avg, color = lower))  +
   geom_hline(yintercept = -0.05, lty = 2) +
   geom_errorbar(aes(ymin = lb, ymax = ub), width = 0.5, na.rm = TRUE) +
@@ -8362,7 +8369,7 @@ ggarrange(
 )
 ```
 
-Figure 55. Connection among ventilation predictors. CI, confidence interval; OR, odds ratio.
+Figure 56. Connection among ventilation predictors. CI, confidence interval; OR, odds ratio.
 
 ## Severe ROP
 
@@ -8515,20 +8522,2098 @@ modeval_data_set$hearing$residual$`20`$train
 th$hearing_stack_rr
 ```
 
+# Manuscript figures/tables
 
+```{r Hyperparameters, include=FALSE}
+hyperparameters <-
+  read_csv("inst/extdata/hyperparameters.csv", show_col_types = FALSE)
+```
 
+```{r Hyperparameters on paper - create, include=FALSE}
+table21 <-
+  hyperparameters |>
+  mutate(
+    explainer =
+      ifelse(duplicated(paste0(name, algorithm, explainer)), "", explainer)
+    , algorithm =
+      ifelse(duplicated(paste0(name, algorithm)), "", algorithm)
+    , name =
+      ifelse(duplicated(paste0(name)), "", name)
+  ) |>
+  rename_all(str_replace_all, "_", " ") |>
+  rename_all(str_to_sentence)
+```
 
+```{r Hyperparameters on paper - show, echo=FALSE}
+table21 |>
+  kable(
+    caption = "Table 21. Hyperparameters."
+    , format = kable_format
+  ) |>
+  kable_classic() |>
+  footnote(
+    paste0(
+      "DNN, deep neural network; "
+      , "GBM, gradient boosting machine; "
+      , "RF, random forest; "
+      , "RR, ridge regression."
+    )
+  ) |>
+  column_spec(seq(ncol(table21)), extra_css = "vertical-align:top;")
+```
 
+```{r Determine variables based on ID only and both ID and t, include=FALSE}
+id_based_vars <-
+  c(var_reg$independent, var_reg$covariates, var_reg$dependent) |>
+  pbsapply(\(x) nrow(unique(select_at(modeval_data, c(var_reg$s, x)))))
 
+id_based_vars <-
+  names(id_based_vars)[
+    id_based_vars == nrow(unique(select_at(modeval_data, var_reg$s)))
+  ]
 
+id_t_based_vars <-
+  c(var_reg$independent, var_reg$covariates, var_reg$dependent) |>
+  setdiff(id_based_vars)
+```
 
+```{r Modeling and evaluation data based on ID for int val, include=FALSE}
+modeval_data_id_based_int <-
+  modeval_data |>
+  select_at(c(var_reg$s, id_based_vars)) |>
+  unique() |>
+  mutate(
+    set =
+      case_when(
+        id %in% train_id ~ "Train"
+        , id %in% val_id ~ "Validation"
+        , id %in% test_id ~ "Test"
+      ) |>
+      factor(c("Train", "Validation", "Test", "Independent test"))
+  )
 
+modeval_data_id_based_int <- 
+  modeval_data_id_based_int |>
+  select_if(colnames(modeval_data_id_based_int) != var_reg$s)
+```
 
+```{r Modeling and evaluation data based on ID-t for int val, include=FALSE}
+modeval_data_idt_based_int <-
+  modeval_data |>
+  select_at(c(var_reg$s, id_t_based_vars)) |>
+  mutate(
+    set =
+      case_when(
+        id %in% train_id ~ "Train"
+        , id %in% val_id ~ "Validation"
+        , id %in% test_id ~ "Test"
+      ) |>
+      factor(c("Train", "Validation", "Test", "Independent test"))
+  )
 
+modeval_data_idt_based_int <- 
+  modeval_data_idt_based_int |>
+  select_if(colnames(modeval_data_idt_based_int) != var_reg$s)
+```
 
+```{r Modeling and evaluation data based on ID for ext val, include=FALSE}
+modeval_data_id_based_ext <-
+  modeval_data_indep_test |>
+  select_at(c(var_reg$s, id_based_vars)) |>
+  unique() |>
+  mutate(
+    set =
+      "Independent test" |>
+      factor(c("Train", "Validation", "Test", "Independent test"))
+  )
 
+modeval_data_id_based_ext <- 
+  modeval_data_id_based_ext |>
+  select_if(colnames(modeval_data_id_based_ext) != var_reg$s)
+```
 
+```{r Modeling and evaluation data based on ID-t for ext val, include=FALSE}
+modeval_data_idt_based_ext <-
+  modeval_data_indep_test |>
+  select_at(id_t_based_vars) |>
+  mutate(
+    set =
+      "Independent test" |>
+      factor(c("Train", "Validation", "Test", "Independent test"))
+  )
+```
 
+```{r Variable type on paper - old, include=FALSE}
+paper_old_type <-
+  data.frame(
+    old_type =
+      modeval_data_id_based_int |>
+      rbind(modeval_data_id_based_ext) |>
+      select(-set) |>
+      sapply(class)
+    , new_type = NA
+  ) |>
+  rownames_to_column(var = "variable") |>
+  rbind(
+    data.frame(
+        old_type =
+          modeval_data_idt_based_int |>
+          rbind(modeval_data_idt_based_ext) |>
+          select(-set) |>
+          sapply(class)
+        , new_type = NA
+      ) |>
+      rownames_to_column(var = "variable")
+  )
+```
+
+```{r Variable type on paper - write, eval=FALSE, include=FALSE}
+paper_old_type |>
+  write_csv("inst/extdata/paper_old_type.csv")
+```
+
+```{r Variable type on paper - new, include=FALSE}
+paper_new_type <-
+  read_csv("inst/extdata/paper_new_type.csv", show_col_types = FALSE)
+```
+
+```{r Change variable type of modeval data based on ID, include=FALSE}
+modeval_data_id_based <-
+  modeval_data_id_based_int |>
+  rbind(modeval_data_id_based_ext)
+
+modeval_data_id_based <-
+  modeval_data_id_based |>
+  select(-set) |>
+  colnames() |>
+  lapply(
+    \(x)
+    modeval_data_id_based |>
+      select_at(x) |>
+      mutate_at(
+        x
+        , list(as.factor, as.numeric)[[
+            ifelse(
+              filter(paper_new_type, variable == x)$new_type == "numeric"
+              , 2, 1
+            )
+          ]]
+      )
+  ) |>
+  reduce(cbind) |>
+  cbind(select(modeval_data_id_based, set))
+```
+
+```{r Change variable type of modeval data based on ID-t, include=FALSE}
+modeval_data_idt_based <-
+  modeval_data_idt_based_int |>
+  rbind(modeval_data_idt_based_ext)
+
+modeval_data_idt_based <-
+  modeval_data_idt_based |>
+  select(-set) |>
+  colnames() |>
+  lapply(
+    \(x)
+    modeval_data_idt_based |>
+      select_at(x) |>
+      mutate_at(
+        x
+        , list(as.factor, as.numeric)[[
+            ifelse(
+              filter(paper_new_type, variable == x)$new_type == "numeric"
+              , 2, 1
+            )
+          ]]
+      )
+  ) |>
+  reduce(cbind) |>
+  cbind(select(modeval_data_idt_based, set))
+```
+
+```{r Average and SD on paper per ID, include=FALSE}
+avg_sd_data_paper_id <-
+  select(modeval_data_id_based, set) |>
+  cbind(select_if(modeval_data_id_based, is.numeric)) |>
+  gather(variable, value, -set) |>
+  filter(!is.na(value)) |>
+  group_by(set, variable) |>
+  mutate(N = n()) |>
+  group_by(set, variable, N) |>
+  summarize(
+    avg = mean(value)
+    , std = sd(value)
+    , .groups = "drop"
+  )
+```
+
+```{r Average and SD on paper per ID-t, include=FALSE}
+avg_sd_data_paper_idt <-
+  select(modeval_data_idt_based, set) |>
+  cbind(select_if(modeval_data_idt_based, is.numeric)) |>
+  gather(variable, value, -set) |>
+  filter(!is.na(value)) |>
+  group_by(set, variable) |>
+  mutate(N = n()) |>
+  group_by(set, variable, N) |>
+  summarize(
+    avg = mean(value)
+    , std = sd(value)
+    , .groups = "drop"
+  )
+```
+
+```{r Num colname of modeval data on paper - old, include=FALSE}
+paper_old_num_colname <-
+  avg_sd_data_paper_id |>
+  rbind(avg_sd_data_paper_idt) |>
+  select(old_colname = variable) |>
+  unique() |>
+  mutate(new_colname = NA, group = NA, subgroup = NA)
+```
+
+```{r Num colname of modeval data on paper - write, eval=FALSE, include=FALSE}
+paper_old_num_colname |>
+  write_csv("inst/extdata/paper_old_num_colname.csv")
+```
+
+```{r Num colname of modeval data on paper - new, include=FALSE}
+paper_new_num_colname <-
+  read_csv("inst/extdata/paper_new_num_colname.csv", show_col_types = FALSE) |>
+  mutate(value = "")
+```
+
+```{r Tidy up average and SD on paper, include=FALSE}
+avg_sd_data_paper <-
+  list(Subjects = avg_sd_data_paper_id, Trajectories = avg_sd_data_paper_idt) |>
+  lapply(
+    left_join
+    , rename(paper_new_num_colname, variable = old_colname)
+    , by = join_by(variable)
+  ) |>
+  lapply(mutate, variable = new_colname) |>
+  lapply(select, -new_colname) |>
+  imap(~ mutate(.x, level = .y)) |>
+  reduce(rbind) |>
+  mutate(statistics = "Avg. ± SD") |>
+  select(set, level, variable, value, statistics, everything())
+```
+
+```{r Proportion on paper per ID, include=FALSE}
+prop_n_data_paper_id <-
+  select(modeval_data_id_based, set) |>
+  cbind(
+    select_if(modeval_data_id_based, \(x) !is.numeric(x)) |>
+      select(-set) |>
+      mutate_all(as.character)
+  ) |>
+  gather(variable, value, -set) |>
+  group_by(set, variable) |>
+  mutate(N = n()) |>
+  group_by(set, variable, value, N) |>
+  summarize(n = n(), .groups = "drop") |>
+  mutate(p = round(n / N * 100, 0))
+```
+
+```{r Proportion on paper per ID-t, include=FALSE}
+prop_n_data_paper_idt <-
+  select(modeval_data_idt_based, set) |>
+  cbind(
+    select_if(modeval_data_idt_based, \(x) !is.numeric(x)) |>
+      select(-set) |>
+      mutate_all(as.character)
+  ) |>
+  gather(variable, value, -set) |>
+  group_by(set, variable) |>
+  mutate(N = n()) |>
+  group_by(set, variable, value, N) |>
+  summarize(n = n(), .groups = "drop") |>
+  mutate(p = round(n / N * 100, 0))
+```
+
+```{r Cat col & cat of modeval data on paper - old, include=FALSE}
+paper_old_cat_colname_cat <-
+  prop_n_data_paper_id |>
+  rbind(prop_n_data_paper_idt) |>
+  select(old_colname = variable, old_cat = value) |>
+  unique() |>
+  mutate(new_colname = NA, new_cat = NA, group = NA, subgroup = NA) |>
+  select(old_colname, new_colname, old_cat, new_cat, everything())
+```
+
+```{r Cat col & cat of modeval data on paper - write, eval=FALSE, include=FALSE}
+paper_old_cat_colname_cat |>
+  write_csv("inst/extdata/paper_old_cat_colname_cat.csv")
+```
+
+```{r Cat col & cat of modeval data on paper - new, include=FALSE}
+paper_new_cat_colname_cat <-
+  read_csv("inst/extdata/paper_new_cat_colname_cat.csv", show_col_types = FALSE)
+```
+
+```{r Tidy up proportion on paper, include=FALSE}
+prop_n_data_paper <-
+  list(Subjects = prop_n_data_paper_id, Trajectories = prop_n_data_paper_idt) |>
+  lapply(
+    left_join
+    , rename(paper_new_cat_colname_cat, variable = old_colname, value = old_cat)
+    , by = join_by(variable, value)
+  ) |>
+  lapply(mutate, variable = new_colname, value = new_cat) |>
+  lapply(select, -new_colname, -new_cat) |>
+  imap(~ mutate(.x, level = .y)) |>
+  reduce(rbind) |>
+  mutate(statistics = "n (%)") |>
+  select(set, level, variable, value, statistics, everything()) |>
+  filter(!is.na(value))
+```
+
+```{r Compile groups and subgroups of variables - unorder, include=FALSE}
+group_subgroup_unordered <-
+  select(avg_sd_data_paper, group, subgroup) |>
+  rbind(select(prop_n_data_paper, group, subgroup)) |>
+  unique() |>
+  mutate(
+    group =
+      group |>
+      factor(
+        c("Prenatal", "At birth", "Daily", "Occasional", "Weekly"
+          ,"Postmenstrual age 36 w", "Term-equivalent age", "Discharge"
+        )
+      )
+  ) |>
+  arrange(group, subgroup) |>
+  mutate(order = NA)
+```
+
+```{r Compile groups and subgroups of variables - write, eval=FALSE, include=FALSE}
+group_subgroup_unordered |>
+  write_csv("inst/extdata/group_subgroup_unordered.csv")
+```
+
+```{r Compile groups and subgroups of variables - ordered, include=FALSE}
+group_subgroup_ordered <-
+  read_csv("inst/extdata/group_subgroup_ordered.csv", show_col_types = FALSE) |>
+  mutate(
+    group = factor(group, levels(group_subgroup_unordered$group))
+    , subgroup = reorder(subgroup, order)
+  )
+
+group_subgroup_ordered <-
+  paper_new_num_colname |>
+  select(group, subgroup,  variable = new_colname, value ) |>
+  rbind(
+    paper_new_cat_colname_cat |>
+      select(group, subgroup, variable = new_colname, value = new_cat)
+  ) |>
+  filter(!is.na(value)) |>
+  mutate(
+    group  = factor(group, levels(group_subgroup_ordered$group))
+    , subgroup  = factor(subgroup, levels(group_subgroup_ordered$subgroup))
+    , variable = factor(variable, unique(variable))
+    , value = factor(value, c("", unique(value)[unique(value) != ""]))
+  ) |>
+  arrange(group, subgroup, variable, value)
+```
+
+```{r Summarize sample characteristics on paper, include=FALSE}
+desc_stats_paper <-
+  list(
+    avg_sd_data_paper |>
+      mutate_at(c("avg", "std"), round, 2) |>
+      mutate(std = paste0("(", as.character(std), ")")) |>
+      unite(avg_std, avg, std, sep=" ") |>
+      rename(summary2 = avg_std)
+    , prop_n_data_paper |>
+      mutate(p = paste0("(", ifelse(p == 0, "≤0.5", as.character(p)), ")")) |>
+      unite(n_p, n, p, sep = " ") |>
+      rename(summary2 = n_p)
+  ) |>
+  reduce(rbind) |>
+  mutate(
+    level = ifelse(variable == "Age of death (day)", "Death subjects", level)
+    , level = factor(level, c("Subjects", "Death subjects", "Trajectories"))
+    , group  = factor(group, levels(group_subgroup_ordered$group))
+    , subgroup  = factor(subgroup, levels(group_subgroup_ordered$subgroup))
+    , variable = factor(variable, levels(group_subgroup_ordered$variable))
+    , value = factor(value, levels(group_subgroup_ordered$value))
+  ) |>
+  select(level, group, subgroup, everything()) |>
+  arrange(level, group, subgroup, variable, value)
+
+desc_stats_paper <-
+  desc_stats_paper |>
+  left_join(
+    desc_stats_paper |>
+      select(level, N) |>
+      unique() |>
+      group_by(level) |>
+      summarize(N2 = sum(N), .groups = "drop")
+    , by = join_by(level)
+  )
+
+desc_stats_paper <-
+  desc_stats_paper |>
+  select(level, set, n = N, N2) |>
+  unique() |>
+  mutate(p = round(n / N2 * 100, 0)) |>
+  mutate(p = paste0("(", as.character(p), ")")) |>
+  unite(n_p, n, p, sep = " ") |>
+  rename(summary2 = n_p) |>
+  spread(set, summary2, fill = "0 (0)") |>
+  mutate(
+    group = factor("Total")
+    , subgroup = factor("")
+    , variable = factor("")
+    , value = factor("")
+    , statistics = "n (%)*"
+  ) |>
+  select(level, group, subgroup, variable, value, statistics, everything()) |>
+  rbind(
+    desc_stats_paper |>
+      select(-N) |>
+      spread(set, summary2, fill = "0 (0)")
+  ) |>
+  mutate(level = paste0(level, " (N=", N2, ")")) |>
+  select(-N2) |>
+  mutate_at("level", \(x) factor(x, unique(x))) |>
+  arrange(level, group, subgroup, variable, value)
+```
+
+```{r Sample characteristics on paper - create 1, include=FALSE}
+table22 <-
+  desc_stats_paper |>
+  mutate_all(as.character) |>
+  mutate(
+    value =
+      ifelse(
+        variable
+        %in% c(
+          "Severe ROP", "BPD", "Moderate/severe BPD", "EUGR-BW", "EUGR-HC"
+          , "Failed to pass hearing screening"
+        )
+        & value == "Missing"
+        , paste0(value, "†")
+        , value
+      )
+  ) |>
+  mutate(
+    variable =
+      ifelse(duplicated(paste0(level, group, subgroup, variable)), "", variable)
+    , subgroup =
+      ifelse(duplicated(paste0(level, group, subgroup)), "", subgroup)
+    , group =
+      ifelse(duplicated(paste0(level, group)), "", group)
+    , level = ifelse(duplicated(level), "", level)
+  ) |>
+  rename_all(str_to_sentence) |>
+  rename(` ` = Value, `  ` = Variable, `   ` = Subgroup, Variable = Group)
+```
+
+```{r Sample characteristics on paper - show 1, echo=FALSE}
+table22 |>
+  kable(
+    caption = "Table 22. Sample characteristics."
+    , format = kable_format
+  ) |>
+  kable_classic() |>
+  footnote(
+    paste0(
+      "Total proportion may be >100% due to rounding. "
+      , "*, by row; "
+      , "†, A minority of the outcomes, except survival, was diagnosed before "
+      , "death if any; "
+      , "AKI, acute kidney injury; "
+      , "Avg., average; "
+      , "BPD, bronchopulmonary dysplasia; "
+      , "FFP, fresh frozen plasma; "
+      , "GDM, gestational diabetes mellitus; "
+      , "EUGR, extrauterine growth restriction; "
+      , "EUGR-BW, EUGR by body weight; "
+      , "EUGR-HC, EUGR by head circumference; "
+      , "hs-PDA, hemodynamically-significant patent ductus arteriosus; "
+      , "IMV, invasive mechanical ventilation; "
+      , "IVF, in vitro fertilization; "
+      , "IVH, intraventricular hemorrhage; "
+      , "NEC, necrotizing enterocolitis; "
+      , "PVL, periventricular leukomalacia; "
+      , "ROP, retinopathy of prematurity; "
+      , "SD, standard deviation; "
+      , "SIP, spontaneous intestinal perforation."
+    )
+  ) |>
+  column_spec(seq(ncol(table22)), extra_css = "vertical-align:top;")
+```
+
+```{r Sample key characteristics on paper - create, include=FALSE}
+table23 <-
+  desc_stats_paper |>
+  mutate_all(as.character) |>
+  mutate(
+    value =
+      ifelse(
+        variable
+        %in% c(
+          "Severe ROP", "BPD", "Moderate/severe BPD", "EUGR-BW", "EUGR-HC"
+          , "Failed to pass hearing screening"
+        )
+        & value == "Missing"
+        , paste0(value, "†")
+        , value
+      )
+  ) |>
+  mutate(
+    variable = ifelse(group == "Total" & variable == "", "Total", variable)
+  ) |>
+  filter(
+    variable
+    %in% c(
+      "Total"
+      , "Maternal age (year)", "Maternal education level (college)"
+      , "Socieconomic status"
+      , "Gestational age at birth (week)", "Sex"
+      , "Severe ROP", "BPD", "Moderate/severe BPD", "EUGR-BW", "EUGR-HC"
+      , "Failed to pass hearing screening"
+    )
+  ) |>
+  select(-level, -group, -subgroup) |>
+  mutate(
+    variable =
+      ifelse(duplicated(paste0(variable)), "", variable)
+  ) |>
+  rename_all(str_to_sentence) |>
+  rename(` ` = Value)
+```
+
+```{r Sample key characteristics on paper - show, echo=FALSE}
+table23 |>
+  kable(
+    caption = "Table 23. Key characteristics of samples."
+    , format = kable_format
+  ) |>
+  kable_classic() |>
+  footnote(
+    paste0(
+      "Total proportion may be >100% due to rounding. "
+      , "*, by row; "
+      , "†, A minority of the outcomes, except survival, was diagnosed before "
+      , "death if any; "
+      , "Avg., average; "
+      , "BPD, bronchopulmonary dysplasia; "
+      , "EUGR, extrauterine growth restriction; "
+      , "EUGR-BW, EUGR by body weight; "
+      , "EUGR-HC, EUGR by head circumference; "
+      , "ROP, retinopathy of prematurity; "
+      , "SD, standard deviation."
+    )
+  ) |>
+  column_spec(seq(ncol(table23)), extra_css = "vertical-align:top;")
+```
+
+```{r Combine regression analysis for paper, include=FALSE}
+paper_reg <-
+  list(
+    unadjusted =
+      univar_reg |>
+      filter(term != "(Intercept)")
+    , adjusted =
+      multivar_reg  |>
+      filter(term != "(Intercept)") |>
+      inner_join(
+        univar_reg |>
+          select(outcome, variable, term) |>
+          unique()
+        , by = join_by(outcome, variable, term)
+      )
+  )  |>
+  lapply(
+    select_at, c("outcome", "variable", "term", "OR", "LB", "UB", "p.value")
+  ) |>
+  lapply(
+    mutate
+    , sig =
+        case_when(
+          is.na(OR) ~ ""
+          , (LB > 1 | UB < 1) & p.value <= 0.05 ~ "*"
+          , TRUE ~ ""
+        )
+  ) |>
+  lapply(
+    mutate_at
+    , c("OR", "LB", "UB", "p.value")
+    , \(x)
+      case_when(
+        is.na(x) ~ ""
+        , x < 0.001 ~ "<0.001"
+        , x > 100 ~ ">100"
+        , TRUE ~ as.character(round(x, 3))
+      )
+  ) |>
+  lapply(mutate, OR = paste0(OR, " (", LB, ", ", UB, "; ", p.value, ")")) |>
+  lapply(mutate, OR = ifelse(OR == " (, ; )", "1 (0, Inf; >0.05)", OR)) |>
+  lapply(select, -LB, -UB, -p.value) |>
+  imap(~ rename_at(.x, "OR", \(x) .y)) |>
+  reduce(left_join, by = join_by(outcome, variable, term)) |>
+  left_join(
+    multivar_reg |>
+      select(outcome, variable, covariates) |>
+      separate_rows(covariates, sep = " \\+ ") |>
+      mutate_at("covariates", trimws)
+    , by = join_by(outcome, variable)
+    , relationship = "many-to-many"
+  ) |>
+  mutate(
+    adjusted = ifelse(sig.x == "", NA, adjusted)
+    , sig.y = ifelse(sig.x == "", NA, sig.y)
+    ,  covariates = ifelse(sig.x == "", "N/A", covariates)
+  ) |>
+  mutate_at(
+    c("unadjusted", "sig.x", "adjusted", "sig.y"), \(x) ifelse(is.na(x), "", x)
+  ) |>
+  mutate(
+    unadjusted = paste0(unadjusted, sig.x)
+    , adjusted = paste0(adjusted, sig.y)
+  ) |>
+  select(-sig.x, -sig.y) |>
+  left_join(
+    reg_data |>
+      select_if(is.factor) |>
+      lapply(levels) |>
+      imap(~ data.frame(variable = .y, reference = .x[1])) |>
+      reduce(rbind)
+    , by = join_by(variable)
+  ) |>
+  select(outcome, variable, term, reference, everything()) |>
+  left_join(
+    paper_new_cat_colname_cat |>
+      select(outcome = old_colname, outcome2 = new_colname) |>
+      unique()
+    , by = join_by(outcome)
+  ) |>
+  mutate(outcome = outcome2) |>
+  select(-outcome2) |>
+  left_join(
+    paper_new_num_colname |>
+      mutate(value2 = "value") |>
+      select(
+        variable = old_colname, variable2 = new_colname
+        , term = value2, term2 = value
+      ) |>
+      rbind(
+        paper_new_cat_colname_cat |>
+          select(
+            variable = old_colname, variable2 = new_colname
+            , term = old_cat, term2 = new_cat
+          )
+      ) |>
+      mutate(
+        term =
+          ifelse(
+            str_detect(variable2, "\\(scale\\)")
+            & !str_detect(variable, "^birthtime")
+            , "value", term
+          )
+        , term2 =
+          ifelse(
+            str_detect(variable2, "\\(scale\\)")
+            & !str_detect(variable, "^birthtime")
+            , "", term2
+          )
+      ) |>
+      unique()
+    , by = join_by(variable, term)
+  ) |>
+  mutate(variable = variable2, term = term2) |>
+  select(-variable2, -term2) |>
+  left_join(
+    paper_new_cat_colname_cat |>
+      mutate(
+        new_cat =
+          ifelse(str_detect(old_colname, "^birthtime"), "others", new_cat)
+      ) |>
+      select(
+        variable = new_colname, reference = old_cat, reference2 = new_cat
+      ) |>
+      unique()
+    , by = join_by(variable, reference)
+  ) |>
+  mutate(reference = reference2) |>
+  select(-reference2) |>
+  mutate(
+    term = ifelse(is.na(reference), term, paste0(term, " vs. ", reference))
+  ) |>
+  select(-reference) |>
+  left_join(
+    paper_new_num_colname |>
+      select(covariates = old_colname, covariates2 = new_colname) |>
+      rbind(
+        paper_new_cat_colname_cat |>
+          select(covariates = old_colname, covariates2 = new_colname)
+      ) |>
+      unique()
+    , by = join_by(covariates)
+  ) |>
+  mutate(covariates = ifelse(is.na(covariates2), covariates, covariates2)) |>
+  select(-covariates2) |>
+  mutate(
+    outcome = factor(outcome, unique(outcome))
+    , variable = factor(variable, levels(group_subgroup_ordered$variable))
+  ) |>
+  left_join(
+    group_subgroup_ordered |>
+      select(group, subgroup, variable) |>
+      unique()
+    , by = join_by(variable)
+  ) |>
+  select(outcome, group, subgroup, variable, everything()) |>
+  arrange(outcome, group, subgroup, variable) |>
+  group_by(outcome, group, subgroup, variable, term, unadjusted, adjusted) |>
+  summarize(
+    covariates = paste0(unique(covariates), collapse = ", "), .groups = "drop"
+  )
+```
+
+```{r Regression analysis on paper - create, include=FALSE}
+table24 <-
+  paper_reg |>
+  mutate_all(as.character) |>
+  mutate(
+    variable =
+      ifelse(duplicated(paste0(outcome, group, subgroup, variable)), "", variable)
+    , subgroup =
+      ifelse(duplicated(paste0(outcome, group, subgroup)), "", subgroup)
+    , group =
+      ifelse(duplicated(paste0(outcome, group)), "", group)
+    , outcome = ifelse(duplicated(outcome), "", outcome)
+  ) |>
+  rename_all(str_to_sentence) |>
+  rename(
+    ` ` = Term, `  ` = Variable, `   ` = Subgroup, Variable = Group
+    , `Unadjusted effect (95% CI)` = Unadjusted
+    , `Adjusted effect (95% CI)` = Adjusted
+  )
+```
+
+```{r Regression analysis on paper - show, echo=FALSE}
+table24 |>
+  kable(
+    caption = "Table 24. Multiple regression analyses."
+    , format = kable_format
+  ) |>
+  kable_classic() |>
+  footnote(
+    paste0(
+      "Adjusted regression was conducted if the unadjusted one demonstrated "
+      , "significant effect. "
+      , "The adjusted regression was the same with unadjusted one when no "
+      , "covariates was selected. "
+      , "The effect was estimated by HR if at least one of variables was a "
+      , "trajectory variable among independent and dependent variables and "
+      , "covariates; otherwise, the effect was estimated by OR. "
+      , "*, significant effect, i.e., either LB >1 or UB <1 and p-value ≤0.05; "
+      , "AKI, acute kidney injury; "
+      , "Avg., average; "
+      , "BPD, bronchopulmonary dysplasia; "
+      , "CI, confidence interval; "
+      , "FFP, fresh frozen plasma; "
+      , "GDM, gestational diabetes mellitus; "
+      , "EUGR, extrauterine growth restriction; "
+      , "EUGR-BW, EUGR by body weight; "
+      , "EUGR-HC, EUGR by head circumference; "
+      , "HR, hazard ratio; "
+      , "hs-PDA, hemodynamically-significant patent ductus arteriosus; "
+      , "IVF, in vitro fertilization; "
+      , "IVH, intraventricular hemorrhage; "
+      , "LB, lower bound of 95% CI; "
+      , "N/A, not applicable; "
+      , "NEC, necrotizing enterocolitis; "
+      , "OR, odds ratio; "
+      , "PVL, periventricular leukomalacia; "
+      , "ROP, retinopathy of prematurity; "
+      , "SD, standard deviation; "
+      , "SIP, spontaneous intestinal perforation; "
+      , "UB, upper bound of 95% CI. "
+    )
+  ) |>
+  column_spec(seq(ncol(table24)), extra_css = "vertical-align:top;")
+```
+
+```{r Stacked originap SHAP feature values on paper, include=FALSE}
+paper_stacked_ori_shap_feature_values <-
+  stacked_ori_shap_feature_values |>
+  lapply(
+    left_join
+    , paper_new_num_colname |>
+      select(feature = old_colname, feature2 = new_colname) |>
+      rbind(
+        paper_new_cat_colname_cat |>
+          select(feature = old_colname, feature2 = new_colname)
+      ) |>
+      unique() |>
+      add_row(
+        data.frame(feature = "expected_value", feature2 = "Expected value")
+      ) |>
+      add_row(data.frame(feature = "t", feature2 = "Postnatal day (day)"))
+    , by = join_by(feature)
+  ) |>
+  lapply(mutate, feature = feature2) |>
+  lapply(select, -feature2)
+```
+
+```{r Severe ROP eval on paper, include=FALSE}
+paper_eval_rop_severe <-
+  paper_arrange_eval_plot(
+    calibration_plot = rop_severe_stack_eval_calibration_plot
+    , decision_plot = rop_severe_stack_eval_decision_plot
+    , discrimination_plot = rop_severe_stack_eval_discrimination_plot
+    , threshold = th$rop_severe_stack_rr
+    , shap_beeswarm_obj =
+      paper_stacked_ori_shap_feature_values$rop_severe_stack_rr |>
+      mutate(feature = str_wrap(feature, 30)) |>
+      shap_beeswarm_plot(1, Inf, seed, 0.75, "Expected value")
+    , outcome_name = "rop_severe"
+    , model_name = "RR"
+    , timing = "t_14"
+    , ghi = c(11, 7.5, 1.5)
+    , ghi_label = c("", LETTERS[9:10])
+  )
+```
+
+```{r figure-57, echo=FALSE, fig.height=24, fig.width=14}
+paper_eval_rop_severe
+```
+
+Figure 57. Severe ROP model evaluation for: (A) DNN calibration; (B) GBM calibration; (C) RF calibration; (D) RR calibration; (E) clinical utility by DCA; (F) discrimination by ROC; (G) explainability by SHAP; (H) time-specific discrimination by CM; and (I) generalization by CM using independent test set compared to test set. The values 0 and 1 in panels A to D indicate negative and positive outcome, respectively. A vertical dashed line in panel E indicates the selected threshold. A point in panel F indicates specificity and sensitivity of the best model using the selected threshold. The best timing for the best model was selected in panel I according to TPR, TNR, and NPV using validation set. AKI, acute kidney injury; AUC-ROC, the area under curve of ROC; CM, confusion matrix; CI, confidence interval; DNN, deep neural network; EUGR, extrauterine growth restriction; GBM, gradient boosting machine; hs-PDA, hemodynamically-significant patent ductus arteriosus; IMV, invasive mechanical ventilation; IVH; intraventricular hemorrhage; NPV, negative predictive value; PPV, positive predictive value or precision; PRBC, packed red blood cell; ROP, retinopathy of prematurity; RF, random forest; ROC, receiver operating characteristics; RR, ridge regression; SHAP, the Shapley additive explanation; SIP, spontaneous intestinal perforation; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity/recall.
+
+```{r Mod/sev BPD eval on paper, include=FALSE}
+paper_eval_bpd_moderate_severe <-
+  paper_arrange_eval_plot(
+    calibration_plot = bpd_moderate_severe_stack_eval_calibration_plot
+    , decision_plot = bpd_moderate_severe_stack_eval_decision_plot
+    , discrimination_plot = bpd_moderate_severe_stack_eval_discrimination_plot
+    , threshold = th$bpd_moderate_severe_stack_rf
+    , shap_beeswarm_obj =
+      paper_stacked_ori_shap_feature_values$bpd_moderate_severe_stack_rf |>
+      mutate(feature = str_wrap(feature, 30)) |>
+      shap_beeswarm_plot(1, Inf, seed, 0.75, "Expected value")
+    , outcome_name = "bpd_moderate_severe"
+    , model_name = "RF"
+    , timing = "t_28"
+    , ghi = c(11, 7.5, 1.5)
+  )
+```
+
+```{r figure-58, echo=FALSE, fig.height=24, fig.width=14}
+paper_eval_bpd_moderate_severe
+```
+
+Figure 58. Moderate/severe BPD model evaluation for: (A) DNN calibration; (B) GBM calibration; (C) RF calibration; (D) RR calibration; (E) clinical utility by DCA; (F) discrimination by ROC; (G) explainability by SHAP; (H) time-specific discrimination by CM; and (I) generalization by CM using independent test set compared to test set. The values 0 and 1 in panels A to D indicate negative and positive outcome, respectively. A vertical dashed line in panel E indicates the selected threshold. A point in panel F indicates specificity and sensitivity of the best model using the selected threshold. The best timing for the best model was selected in panel I according to TPR, TNR, and NPV using validation set. AUC-ROC, the area under curve of ROC; BPD, bronchopulmonary dysplasia; CM, confusion matrix; CI, confidence interval; DNN, deep neural network; GBM, gradient boosting machine; IMV, invasive mechanical ventilation; NPV, negative predictive value; PPV, positive predictive value or precision; RF, random forest; ROC, receiver operating characteristics; RR, ridge regression; SHAP, the Shapley additive explanation; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity/recall.
+
+```{r EUGR-HC eval on paper, include=FALSE}
+paper_eval_eugr_hc <-
+  paper_arrange_eval_plot(
+    calibration_plot = eugr_hc_stack_eval_calibration_plot
+    , decision_plot = eugr_hc_stack_eval_decision_plot
+    , discrimination_plot = eugr_hc_stack_eval_discrimination_plot
+    , threshold = th$eugr_hc_stack_rr
+    , shap_beeswarm_obj =
+      paper_stacked_ori_shap_feature_values$eugr_hc_stack_rr |>
+      mutate(feature = str_wrap(feature, 30)) |>
+      shap_beeswarm_plot(1, Inf, seed, 0.75, "Expected value")
+    , outcome_name = "eugr_hc"
+    , model_name = "RR"
+    , timing = "t_28"
+    , ghi = c(11, 7.5, 1.5)
+  )
+```
+
+```{r figure-59, echo=FALSE, fig.height=24, fig.width=14}
+paper_eval_eugr_hc
+```
+
+Figure 59. EUGR-HC model evaluation for: (A) DNN calibration; (B) GBM calibration; (C) RF calibration; (D) RR calibration; (E) clinical utility by DCA; (F) discrimination by ROC; (G) explainability by SHAP; (H) time-specific discrimination by CM; and (I) generalization by CM using independent test set compared to test set. The values 0 and 1 in panels A to D indicate negative and positive outcome, respectively. A vertical dashed line in panel E indicates the selected threshold. A point in panel F indicates specificity and sensitivity of the best model using the selected threshold. The best timing for the best model was selected in panel I according to TPR, PPV, TNR, and NPV using validation set. AKI, acute kidney injury; AUC-ROC, the area under curve of ROC; CM, confusion matrix; CI, confidence interval; DNN, deep neural network; EUGR, extrauterine growth restriction; EUGR-HC, EUGR by head circumference; GBM, gradient boosting machine; hs-PDA, hemodynamically-significant patent ductus arteriosus; IMV, invasive mechanical ventilation; IVH; intraventricular hemorrhage; NPV, negative predictive value; PPV, positive predictive value or precision; RF, random forest; ROC, receiver operating characteristics; RR, ridge regression; SHAP, the Shapley additive explanation; SIP, spontaneous intestinal perforation; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity/recall.
+
+```{r EUGR-BW eval on paper, include=FALSE}
+paper_eval_eugr_bw <-
+  paper_arrange_eval_plot(
+    calibration_plot = eugr_bw_stack_eval_calibration_plot
+    , decision_plot = eugr_bw_stack_eval_decision_plot
+    , discrimination_plot = eugr_bw_stack_eval_discrimination_plot
+    , threshold = th$eugr_bw_stack_rr
+    , shap_beeswarm_obj =
+      paper_stacked_ori_shap_feature_values$eugr_bw_stack_rr |>
+      mutate(feature = str_wrap(feature, 30)) |>
+      shap_beeswarm_plot(1, Inf, seed, 0.75, "Expected value")
+    , outcome_name = "eugr_bw"
+    , model_name = "RR"
+    , timing = "t_14"
+    , ghi = c(11, 7.5, 1.5)
+  )
+```
+
+```{r figure-60, echo=FALSE, fig.height=24, fig.width=14}
+paper_eval_eugr_bw
+```
+
+Figure 60. EUGR-BW BPD model evaluation for: (A) DNN calibration; (B) GBM calibration; (C) RF calibration; (D) RR calibration; (E) clinical utility by DCA; (F) discrimination by ROC; (G) explainability by SHAP; (H) time-specific discrimination by CM; and (I) generalization by CM using independent test set compared to test set. The values 0 and 1 in panels A to D indicate negative and positive outcome, respectively. A vertical dashed line in panel E indicates the selected threshold. A point in panel F indicates specificity and sensitivity of the best model using the selected threshold. The best timing for the best model was selected in panel I according to TPR and NPV using validation set. AKI, acute kidney injury; AUC-ROC, the area under curve of ROC; CM, confusion matrix; CI, confidence interval; DNN, deep neural network; EUGR, extrauterine growth restriction; EUGR-BW, EUGR by body weight; GBM, gradient boosting machine; hs-PDA, hemodynamically-significant patent ductus arteriosus; IMV, invasive mechanical ventilation; NPV, negative predictive value; PPV, positive predictive value or precision; RF, random forest; ROC, receiver operating characteristics; RR, ridge regression; SHAP, the Shapley additive explanation; SIP, spontaneous intestinal perforation; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity/recall.
+
+```{r Failed hearing eval on paper, include=FALSE}
+paper_eval_hearing <-
+  paper_arrange_eval_plot(
+    calibration_plot = hearing_stack_eval_calibration_plot
+    , decision_plot = hearing_stack_eval_decision_plot
+    , discrimination_plot = hearing_stack_eval_discrimination_plot
+    , threshold = th$hearing_stack_rr
+    , shap_beeswarm_obj =
+      paper_stacked_ori_shap_feature_values$hearing_stack_rr |>
+      mutate(feature = str_wrap(feature, 30)) |>
+      shap_beeswarm_plot(1, Inf, seed, 0.75, "Expected value")
+    , outcome_name = "hearing"
+    , model_name = "RR"
+    , timing = "t_14"
+    , ghi = c(11, 7.5, 1.5)
+  )
+```
+
+```{r figure-61, echo=FALSE, fig.height=24, fig.width=14}
+paper_eval_hearing
+```
+
+Figure 61. Failed-to-pass-hearing-screening model evaluation for: (A) DNN calibration; (B) GBM calibration; (C) RF calibration; (D) RR calibration; (E) clinical utility by DCA; (F) discrimination by ROC; (G) explainability by SHAP; (H) time-specific discrimination by CM; and (I) generalization by CM using independent test set compared to test set. The values 0 and 1 in panels A to D indicate negative and positive outcome, respectively. A vertical dashed line in panel E indicates the selected threshold. A point in panel F indicates specificity and sensitivity of the best model using the selected threshold. The best timing for the best model was selected in panel I according to TPR, TNR, and NPV using validation set. AKI, acute kidney injury; AUC-ROC, the area under curve of ROC; CM, confusion matrix; CI, confidence interval; DNN, deep neural network; GBM, gradient boosting machine; IMV, invasive mechanical ventilation; NPV, negative predictive value; PPV, positive predictive value or precision; RF, random forest; ROC, receiver operating characteristics; RR, ridge regression; SHAP, the Shapley additive explanation; TNR, true negative rate or specificity; TPR, true positive rate or sensitivity/recall.
+
+```{r Predictor profile on paper, include=FALSE}
+paper_predictor_profile <-
+  paper_reg |>
+  mutate_all(as.character) |>
+  mutate_all(\(x) ifelse(x == "", NA, x)) |>
+  mutate(estimate = ifelse(is.na(adjusted), unadjusted, adjusted)) |>
+  select(outcome, group, subgroup, variable, term, estimate) |>
+  separate(
+    estimate, c("OR", "LB", "UB", "p_value", "sig"), sep = " \\(|, |; |\\)"
+  ) |>
+  mutate_at(
+    c("OR", "LB", "UB", "p_value")
+    , \(x) 
+      case_when(
+        x == "<0.001" ~ "0.0009"
+        , x == ">100" ~ "100"
+        , x == ">0.05" ~ "0.051"
+        , TRUE ~ x
+      )
+  ) |>
+  mutate_at(c("OR", "LB", "UB", "p_value"), as.numeric) |>
+  mutate_at(
+    c("OR", "LB", "UB"), \(x) ifelse(x > 4, 4, ifelse(x <= 1/4, 1/4, x))
+  ) |>
+  mutate_at(c("OR", "LB", "UB"), log2) |>
+  mutate_at("term", \(x) ifelse(is.na(x), "", x)) |>
+  unite(variable_term, variable, term, sep = " - ") |>
+  mutate(
+    variable_term =
+      variable_term |>
+      str_remove_all(" - $| - Yes vs\\. No$| - No vs\\. Yes$") |>
+      str_remove_all("\\([:alpha:]+\\s*[:alpha:]*\\)\\s*") |>
+      str_replace_all("Cumulative exposure of ", "Cum. exp. of ") |>
+      str_replace_all("body weight", "BW") |>
+      str_replace_all("head circumference", "HC") |>
+      str_replace_all("Socieconomic status", "SES")
+  ) |>
+  mutate(
+    outcome =
+      outcome |>
+      str_replace_all("/", "/ ") |>
+      str_replace_all("-", " -") |>
+      str_wrap(15)
+  ) |>
+  mutate_at(
+    c("outcome", "group", "subgroup")
+    , \(x) factor(x, unique(x))
+  ) |>
+  mutate_at("variable_term", \(x) factor(x, rev(unique(x)))) |>
+  group_by(variable_term) |>
+  filter(sum(sig == "*") > 0) |>
+  ungroup() |>
+  ggplot(aes(outcome, variable_term, fill = OR)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = sig), size = 2.5) +
+  facet_grid(
+    group  + subgroup ~ ., scales = "free_y", space = "free_y", switch = "y"
+  ) +
+  scale_fill_gradientn(
+    "Effect size"
+		, colors = c("#71c837ff", "white", "#c83737ff")
+		, breaks = c(-2, 0, 2)
+		, labels = c("≤0.25", "1", "≥4")
+	) +
+  theme(
+    panel.border = element_rect(linewidth = 0.25)
+    , panel.spacing = unit(0.25, "mm")
+    , axis.title = element_blank()
+    , axis.ticks.x = element_line(linewidth = 0.25)
+    , axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = 5)
+    , axis.ticks.y = element_line(linewidth = 0.25)
+    , axis.text.y = element_text(size = 5)
+    , strip.background.y = element_blank()
+    , strip.text.y.left = element_text(size = 5, angle = 0, hjust = 1)
+    , strip.placement = "outside"
+    , legend.title = element_text(size = 5)
+    , legend.text = element_text(size = 5)
+    , legend.key.height = unit(0.35, "cm")
+	  , legend.key.width = unit(0.35, "cm")
+    , legend.position = "right"
+  )
+```
+
+```{r ROC curve on paper, include=FALSE}
+paper_roc0 <-
+  list(
+    plot =
+      list(
+        data =
+          list(
+            `Severe ROP` =
+              rop_severe_stack_eval_discrimination[[
+                "rop_severe_stack_rr"
+              ]]$test$plot$data
+            , `Moderate/severe BPD` =
+              bpd_moderate_severe_stack_eval_discrimination[[
+                "bpd_moderate_severe_stack_rf"
+              ]]$test$plot$data
+            , `EUGR-HC` =
+              eugr_hc_stack_eval_discrimination[[
+                "eugr_hc_stack_rr"
+              ]]$test$plot$data
+            , `EUGR-BW` =
+              eugr_bw_stack_eval_discrimination[[
+                "eugr_bw_stack_rr"
+              ]]$test$plot$data
+            , `Failed to pass hearing screening` =
+              hearing_stack_eval_discrimination[[
+                "hearing_stack_rr"
+              ]]$test$plot$data
+          ) |>
+          imap(~ mutate(.x, model = .y)) |>
+          reduce(rbind) |>
+          mutate(model = str_wrap(model, 20)) |>
+          mutate_at("model", \(x) factor(x, unique(x)))
+      )
+  )
+
+paper_roc <-
+  paper_roc0 |>
+  paper_arrange_disc_plot(multiple = TRUE)
+
+paper_roc <-
+  paper_roc +
+  geom_point(
+    data =
+      paper_roc$data |>
+      left_join(
+        list(
+            `Severe ROP` = th$rop_severe_stack_rr
+            , `Moderate/severe\nBPD` = th$bpd_moderate_severe_stack_rf
+            , `EUGR-HC` = th$eugr_hc_stack_rr
+            , `EUGR-BW` = th$eugr_bw_stack_rr
+            , `Failed to pass\nhearing screening` = th$hearing_stack_rr
+          ) |>
+          imap(~ data.frame(model = .y, selected_th = .x)) |>
+          reduce(rbind) |>
+          mutate(model = str_wrap(model, 20)) |>
+          mutate_at("model", \(x) factor(x, unique(x)))
+        , by = join_by(model)
+      ) |>
+      filter(th == selected_th)
+    , size = 1
+  ) +
+  scale_color_manual(
+    "Model"
+    , values =
+      c("#3737c8ff", "#71c837ff", "#c83737ff", "#37abc8ff", "#916f6fff")
+  )
+```
+
+```{r Best timing for the best model on paper, include=FALSE}
+paper_timing <-
+  cm_selected_time_summary |>
+  filter(!outcome %in% c("survive", "bpd")) |>
+  mutate(dataset = "Internal") |>
+  rbind(
+    cm_selected_time_summary_indep_test |>
+      filter(!outcome %in% c("survive", "bpd")) |>
+      mutate(dataset = "External")
+  ) |>
+  timing_selection_filter() |>
+  select(outcome, timing) |>
+  unique() |>
+  left_join(
+    paper_new_cat_colname_cat |>
+      select(outcome = old_colname, new_colname) |>
+      unique()
+    , by = join_by(outcome)
+  ) |>
+  mutate(outcome = new_colname) |>
+  select(-new_colname) |>
+  mutate_at(
+    "outcome"
+    , \(x)
+      x |>
+        str_replace_all("/", "/ ") |>
+        str_replace_all("-", " -") |>
+        str_wrap(15)
+  )
+
+paper_timing <-
+  paper_timing |>
+  mutate_at(
+    "outcome"
+    , \(x)
+      x |>
+        str_replace_all("\n", " ")|>
+        str_replace_all(" -", "-") |>
+        str_replace_all("/ ", "/")
+  ) |>
+  mutate(variable_type = "Outcome") |>
+  rbind(
+    paper_timing |>
+      mutate(
+        outcome = "Survival predictors"
+        , variable_type = "Survival predictors"
+      ) |>
+      unique()
+  ) |>
+  rbind(
+    paper_predictor_profile$data |>
+      filter(sig == "*") |>
+      filter(!outcome %in% c("Survival", "BPD")) |>
+      filter(
+        !variable_term
+         %in% c(
+           paper_predictor_profile$data |>
+             filter(, sig == "*" & outcome == "Survival") |>
+             pull(variable_term)
+         )
+      ) |>
+      left_join(paper_timing, by = join_by(outcome)) |>
+      arrange(group, subgroup, desc(variable_term)) |>
+      select(variable_term, timing, subgroup) |>
+      unique() |>
+      rename(outcome = variable_term) |>
+      rename(variable_type = subgroup)
+  ) |>
+  mutate(best = 1) |>
+  mutate_at("outcome", \(x) factor(x, unique(x))) |>
+  spread(outcome, best, fill = 0) |>
+  right_join(
+    expand.grid(
+        variable_type =
+          c("Outcome"
+            , "Survival predictors"
+            , levels(paper_predictor_profile$data$subgroup)
+          )
+        , timing = paste0("Day ", c(7, 14, 21, 28))
+        , stringsAsFactors = FALSE
+      )
+    , by = join_by(variable_type, timing)
+  ) |>
+  mutate_at(
+    "variable_type"
+    , factor
+    , c("Outcome"
+        , "Survival predictors"
+        , levels(paper_predictor_profile$data$subgroup)
+      )
+  ) |>
+  mutate_at("timing", factor, paste0("Day ", c(7, 14, 21, 28))) |>
+  gather(outcome, best, -timing, -variable_type) |>
+  mutate(best = ifelse(is.na(best), 0, best)) |>
+  mutate_at("outcome", \(x) factor(x, unique(x))) |>
+  mutate(
+    outcome2 = ifelse(best == 1, as.character(outcome), "")
+    , outcome2 = factor(outcome2, c(levels(outcome), ""))
+    , outcome = factor(outcome, rev(levels(outcome)))
+    , best = ifelse(best == 1, "✓", " ")
+  )
+
+paper_timing <-
+  paper_timing |>
+  group_by(variable_type, outcome) |>
+  filter(sum(best != " ") > 0) |>
+  ungroup() |>
+  ggplot(aes(timing, outcome)) +
+  geom_tile(color = "black", fill = "white") +
+  geom_text(aes(label = best), size = 2)  +
+  facet_grid(
+    variable_type ~ ., scales = "free_y", space = "free_y", switch = "y"
+  ) +
+  theme(
+    panel.border = element_blank()
+    , panel.spacing = unit(0.25, "mm")
+    , panel.grid = element_blank()
+    , axis.title = element_blank()
+    , axis.ticks = element_blank()
+    , axis.text.x = element_text(angle = 0, hjust = 0.5, vjust = 1, size = 5)
+    , axis.text.y = element_text(size = 5)
+    , strip.text = element_blank()
+    , legend.title = element_text(size = 5)
+    , legend.text = element_text(size = 5)
+    , legend.key.height = unit(0.35, "cm")
+	  , legend.key.width = unit(0.35, "cm")
+    , legend.position = "right"
+  )
+```
+
+```{r Model perf on paper - plot, include=FALSE}
+paper_performance_plot <-
+  ggarrange(
+    paper_predictor_profile
+    , ggarrange(
+        paper_roc
+        , paper_timing
+        , nrow = 1, ncol = 2, widths = c(3, 2.51181), labels = LETTERS[2:3]
+        , font.label = list(size = 7)
+      )
+    , nrow = 2, ncol = 1, heights = c(3.5, 2), labels = c(LETTERS[1], "")
+    , font.label = list(size = 7)
+  )
+```
+
+```{r Model perf on paper - show, echo=FALSE, fig.height=5.5, fig.width=5.51181}
+paper_performance_plot
+```
+
+Figure 62. The best prediction models: (A) predictors; (B) ROC curve using test set; and (C) best timing for each outcome and the required predictors. Panel A only shows predictors with significant effects on at least an outcome in univariate regression analysis. The color legend of panel A is capped at effect sizes of 0.25 and 4. The points in panel B indicate specificity and sensitivity of the best model using the selected threshold. *, significant effect, i.e., either LB >1 or UB <1 and p-value ≤0.05; AKI, acute kidney injury; BPD, bronchopulmonary dysplasia; CI, confidence interval; EUGR, extrauterine growth restriction; EUGR-BW, EUGR by body weight; EUGR-HC, EUGR by head circumference; hs-PDA, hemodynamically-significant patent ductus arteriosus; IMV, invasive mechanical ventilation; IVH, intraventricular hemorrhage; LB, lower bound of 95% CI; PRBC, packed red blood cell; ROP, retinopathy of prematurity; SD, standard deviation; SIP, spontaneous intestinal perforation; UB, upper bound of 95% CI.
+
+```{r Ext pred pr on paper - plot, include=FALSE}
+paper_ext_predictor_profile <-
+  paper_reg |>
+  mutate_all(as.character) |>
+  mutate_all(\(x) ifelse(x == "", NA, x)) |>
+  mutate(adjusted = ifelse(is.na(adjusted), unadjusted, adjusted)) |>
+  select(
+    outcome, group, subgroup, variable, term, unadjusted, adjusted, covariates
+  ) |>
+  gather(
+    type, estimate, -outcome, -group, -subgroup, -variable, -term, -covariates
+  ) |>
+  separate(
+    estimate, c("OR", "LB", "UB", "p_value", "sig"), sep = " \\(|, |; |\\)"
+  ) |>
+  mutate_at(
+    c("OR", "LB", "UB", "p_value")
+    , \(x) 
+      case_when(
+        x == "<0.001" ~ "0.0009"
+        , x == ">100" ~ "100"
+        , x == ">0.05" ~ "0.051"
+        , TRUE ~ x
+      )
+  ) |>
+  mutate_at(c("OR", "LB", "UB", "p_value"), as.numeric) |>
+  mutate_at(
+    c("OR", "LB", "UB"), \(x) ifelse(x > 4, 4, ifelse(x <= 1/4, 1/4, x))
+  ) |>
+  mutate_at(c("OR", "LB", "UB"), log2) |>
+  mutate_at("term", \(x) ifelse(is.na(x), "", x)) |>
+  unite(variable_term, variable, term, sep = " - ") |>
+  mutate_at(
+    c("variable_term", "covariates")
+    , \(x)
+      x |>
+        str_remove_all(" - $| - Yes vs\\. No$| - No vs\\. Yes$") |>
+        str_remove_all("\\([:alpha:]+\\s*[:alpha:]*\\)\\s*") |>
+        str_replace_all("Cumulative exposure of ", "Cum. exp. of ") |>
+        str_replace_all("body weight", "BW") |>
+        str_replace_all("head circumference", "HC") |>
+        str_replace_all("Socieconomic status", "SES")
+  ) |>
+  mutate(
+    outcome =
+      outcome |>
+      str_replace_all("/", "/ ") |>
+      str_replace_all("-", " -") |>
+      str_wrap(17)
+  ) |>
+  mutate_at(
+    c("outcome", "group", "subgroup")
+    , str_wrap, 17
+  ) |>
+  mutate_at(
+    c("outcome", "group", "subgroup")
+    , \(x) factor(x, unique(x))
+  ) |>
+  group_by(variable_term) |>
+  filter(sum(sig == "*") > 0) |>
+  ungroup() |>
+  mutate_at("variable_term", \(x) factor(x, unique(x))) |>
+  mutate(
+    variable_term_num = as.numeric(variable_term)
+  )
+
+paper_ext_predictor_profile_covariates <-
+  paper_ext_predictor_profile |>
+  select(outcome = variable_term_num, variable_term, covariates) |>
+  mutate_at("covariates", \(x) ifelse(x == "N/A", NA, x)) |>
+  separate_rows(covariates, sep = ",") |>
+  mutate_at("covariates", trimws)
+
+paper_ext_predictor_profile_covariates <-
+  paper_ext_predictor_profile_covariates |>
+  select(-outcome) |>
+  inner_join(
+    paper_ext_predictor_profile_covariates |>
+      select(outcome, variable_term) |>
+      unique() |>
+      mutate_at("variable_term", as.character) |>
+      mutate_at(
+        "variable_term", \(x) ifelse(str_detect(x, " - "), x, paste0(x, " - "))
+      ) |>
+      separate(variable_term, c("covariates", "term"), sep = " - ") |>
+      mutate_at("covariates", trimws) |>
+      select(-term)
+    , by = join_by(covariates)
+  ) |>
+  mutate(sig = "✓")
+
+paper_ext_predictor_profile_covariates <-
+  paper_ext_predictor_profile_covariates |>
+  right_join(
+    expand.grid(
+        variable_term =
+          levels(paper_ext_predictor_profile_covariates$variable_term)
+        , outcome = sort(unique(paper_ext_predictor_profile_covariates$outcome))
+      )
+    , by = join_by(variable_term, outcome)
+  ) |>
+  mutate(OR = 0, LB = 0, UB = 0, p_value = 1) |>
+  select(-covariates) |>
+  left_join(
+    paper_ext_predictor_profile |>
+      select(group, subgroup, variable_term, variable_term_num) |>
+      unique()
+    , by = join_by(variable_term)
+  ) |>
+  mutate(type = "covariates")
+
+paper_ext_predictor_profile <-
+  paper_ext_predictor_profile |>
+  select(-covariates) |>
+  mutate_at("outcome", as.character) |>
+  rbind(paper_ext_predictor_profile_covariates) |>
+  mutate_at("outcome", \(x) factor(x, unique(x))) |>
+  mutate(
+    variable_term = as.character(variable_term)
+    , variable_term = paste0(variable_term, " - ", variable_term_num)
+  ) |>
+  mutate_at("variable_term", \(x) factor(x, rev(unique(x)))) |>
+  mutate_at("type", str_to_sentence) |>
+  mutate_at("type", \(x) factor(x, unique(x)))
+
+paper_ext_predictor_profile_covariates <-
+  paper_ext_predictor_profile |>
+  filter(type == "Covariates") |>
+  mutate_at("outcome", as.character) |>
+  mutate_at("outcome", as.numeric) |>
+  mutate_at("outcome", factor)
+
+paper_ext_predictor_profile_covariates <-
+  paper_ext_predictor_profile_covariates |>
+  mutate(
+    outcome = as.numeric(as.character(outcome))
+    , OR = ifelse(outcome == variable_term_num, 1, OR)
+  ) |>
+  left_join(
+    paper_ext_predictor_profile_covariates |>
+      select(variable_term2 = variable_term, outcome = variable_term_num) |>
+      unique()
+    , by = join_by(outcome)
+  ) |>
+  mutate(
+    outcome =
+      factor(
+        str_remove_all(as.character(variable_term2), " - [:digit:]+$")
+        , rev(str_remove_all(levels(variable_term2), " - [:digit:]+$"))
+      )
+  ) |>
+  select(-variable_term2) |>
+  group_by(variable_term) |>
+  filter(sum(sig == "✓", na.rm = TRUE) > 0) |>
+  ungroup() |>
+  select(outcome, variable_term, OR, group, subgroup, sig, type) |>
+  unique() |>
+  ggplot(aes(outcome, variable_term, fill = OR)) +
+  geom_tile(color = "black")
+
+paper_ext_predictor_profile <-
+  paper_ext_predictor_profile |>
+  filter(type != "Covariates") |>
+  select(outcome, variable_term, OR, group, subgroup, sig, type) |>
+  unique() |>
+  ggplot(aes(outcome, variable_term, fill = OR)) +
+  geom_tile(color = "white")
+  
+paper_ext_predictor_profile <-
+  list(
+    effect_size = paper_ext_predictor_profile
+    , covariates = paper_ext_predictor_profile_covariates
+  ) |>
+  imap(
+    ~ .x +
+      geom_text(aes(label = sig), size = 1.5, na.rm = TRUE) +
+      list(
+        facet_grid(
+          group  + subgroup ~ type, scales = "free", space = "free"
+          , switch = "y"
+        )
+        , facet_grid(
+            group  + subgroup ~ ., scales = "free", space = "free"
+            , switch = "y"
+          )
+      )[[ifelse(.y == "covariates", 2, 1)]] +
+      scale_fill_gradientn(
+        "Effect size"
+    		, colors =
+    		  list(
+    		    c("#71c837ff", "white", "#c83737ff"), c("white", "lightgrey")
+    		  )[[ifelse(.y == "covariates", 2, 1)]]
+    		, breaks =
+    		  list(
+    		    c(-2, 0, 2), c(0, 1)
+    		  )[[ifelse(.y == "covariates", 2, 1)]]
+    		, labels =
+    		  list(
+    		    c("≤0.25", "1", "≥4"), c("0", "1")
+    		  )[[ifelse(.y == "covariates", 2, 1)]]
+    	) +
+      theme(
+        panel.border =
+          list(
+            element_rect(linewidth = 0.25)
+            , element_blank()
+          )[[ifelse(.y == "covariates", 2, 1)]]
+        , panel.spacing =
+          list(
+            unit(0.25, "mm")
+            , unit(0, "mm")
+          )[[ifelse(.y == "covariates", 2, 1)]]
+        , axis.title = element_blank()
+        , axis.ticks.x = element_line(linewidth = 0.25)
+        , axis.text.x =
+          list(
+            element_text(angle = 90, hjust = 1, vjust = 0.5, size = 5)
+            , element_text(angle = 35, hjust = 1, vjust = 1, size = 5)
+          )[[ifelse(.y == "covariates", 2, 1)]]
+        , axis.ticks.y = element_line(linewidth = 0.25)
+        , axis.text.y = element_text(size = 5)
+        , strip.background = element_blank()
+        , strip.text.x = element_text(size = 5)
+        , strip.text.y.left =
+          list(
+            element_text(size = 5, angle = 0, hjust = 1)
+            , element_blank()
+          )[[ifelse(.y == "covariates", 2, 1)]]
+        , strip.placement = "outside"
+        , legend.title = element_text(size = 5)
+        , legend.text = element_text(size = 5)
+        , legend.key.height = unit(0.35, "cm")
+    	  , legend.key.width = unit(0.35, "cm")
+        , legend.position = ifelse(.y == "covariates", "none", "right")
+      )
+  )
+
+paper_ext_predictor_profile_covariates <- paper_ext_predictor_profile[[2]]
+paper_ext_predictor_profile <- paper_ext_predictor_profile[[1]]
+```
+
+```{r Ext pred pr on paper - arrange, include=FALSE}
+paper_ext_predictor_profile_plot <-
+  ggarrange(
+    paper_ext_predictor_profile
+    , paper_ext_predictor_profile_covariates
+    , nrow = 2, ncol = 1, heights = c(3.75, 3.25), labels = LETTERS[1:2]
+    , font.label = list(size = 7)
+  )
+```
+
+```{r Ext pred pr on paper - show, echo=FALSE, fig.height=7, fig.width=5.51181}
+paper_ext_predictor_profile_plot
+```
+
+Figure 63. The selected predictors according to multivariate regression analysis: (A) effect size; and (B) covariates. Numbers in y-axes of panels A and B are provided to assist variable identification across both panels. Panel A only shows predictors with significant effects on at least an outcome in univariate regression analysis (unadjusted). The color legend of panel A is capped at effect sizes of 0.25 and 4. Panel B only shows predictors with at least one covariate. In panel B, a grey box indicates the same variable in both axes. If a variable was used as a covariate for any other variables, grey tiles are assigned to that variable. *, significant effect, i.e., either LB >1 or UB <1 and p-value ≤0.05; AKI, acute kidney injury; Avg., average; BPD, bronchopulmonary dysplasia; CI, confidence interval; EUGR, extrauterine growth restriction; EUGR-BW, EUGR by body weight; EUGR-HC, EUGR by head circumference; hs-PDA, hemodynamically-significant patent ductus arteriosus; IMV, invasive mechanical ventilation; IVF, in vitro fertilization; IVH, intraventricular hemorrhage; LB, lower bound of 95% CI; N/A, not applicable; NEC, necrotizing enterocolitis; PRBC, packed red blood cell; ROP, retinopathy of prematurity; SIP, spontaneous intestinal perforation; UB, upper bound of 95% CI.
+
+```{r Calibration plot on paper, include=FALSE}
+paper_calib <-
+  list(
+    metrics =
+      list(
+        `Severe ROP` =
+          rop_severe_stack_eval_calibration[[
+            "rop_severe_stack_rr"
+          ]]$test$metrics
+        , `Moderate/severe BPD` =
+          bpd_moderate_severe_stack_eval_calibration[[
+            "bpd_moderate_severe_stack_rf"
+          ]]$test$metrics
+        , `EUGR-HC` =
+          eugr_hc_stack_eval_calibration[[
+            "eugr_hc_stack_rr"
+          ]]$test$metrics
+        , `EUGR-BW` =
+          eugr_bw_stack_eval_calibration[[
+            "eugr_bw_stack_rr"
+          ]]$test$metrics
+        , `Failed to pass hearing screening` =
+          hearing_stack_eval_calibration[[
+            "hearing_stack_rr"
+          ]]$test$metrics
+      ) |>
+      imap(~ mutate(.x, model = .y)) |>
+      reduce(rbind) |>
+      mutate(model = str_wrap(model, 20)) |>
+      mutate_at("model", \(x) factor(x, unique(x)))
+    , dist =
+      list(
+        data =
+          list(
+            `Severe ROP` =
+              rop_severe_stack_eval_calibration[[
+                "rop_severe_stack_rr"
+              ]]$test$dist$data
+            , `Moderate/severe BPD` =
+              bpd_moderate_severe_stack_eval_calibration[[
+                "bpd_moderate_severe_stack_rf"
+              ]]$test$dist$data
+            , `EUGR-HC` =
+              eugr_hc_stack_eval_calibration[[
+                "eugr_hc_stack_rr"
+              ]]$test$dist$data
+            , `EUGR-BW` =
+              eugr_bw_stack_eval_calibration[[
+                "eugr_bw_stack_rr"
+              ]]$test$dist$data
+            , `Failed to pass hearing screening` =
+              hearing_stack_eval_calibration[[
+                "hearing_stack_rr"
+              ]]$test$dist$data
+          ) |>
+          imap(~ mutate(.x, model = .y)) |>
+          reduce(rbind) |>
+          mutate(model = str_wrap(model, 20)) |>
+          mutate_at("model", \(x) factor(x, unique(x)))
+      )
+  )
+
+paper_calib_plot <-
+  paper_calib$metrics |>
+  select(-ci) |>
+  mutate_at("term", \(x) factor(x, unique(x))) |>
+  spread(term, estimate, fill = 0) |>
+  right_join(
+    paper_calib$dist$data |>
+      mutate(obs = ifelse(obs == 0, "negative", "positive")) |>
+      spread(obs, n, fill = 0)
+    , by = join_by(model)
+  ) |>
+  mutate(obs = intercept + slope * pred) |>
+  ggplot(aes(pred, obs, color = model)) +
+  geom_abline(intercept = 0, slope = 1, linewidth = 0.5, lty = 2) +
+  geom_path(linewidth = 0.5, na.rm = TRUE) +
+  coord_equal() +
+  scale_x_continuous(
+    "Predicted probability"
+    , breaks = seq(0, 1, 0.1)
+    , limits = c(0, 1)
+  ) +
+  scale_y_continuous(
+    "True probability"
+    , breaks = seq(0, 1, 0.1)
+    , limits = c(0, 1)
+  ) +
+  scale_color_discrete("Model") +
+  theme_classic()
+
+paper_calib_plot <-
+  paper_calib_plot +
+  geom_point(
+    data =
+      paper_calib_plot$data |>
+      select(model, intercept, slope) |>
+      unique() |>
+      left_join(
+        list(
+            `Severe ROP` = th$rop_severe_stack_rr
+            , `Moderate/severe\nBPD` = th$bpd_moderate_severe_stack_rf
+            , `EUGR-HC` = th$eugr_hc_stack_rr
+            , `EUGR-BW` = th$eugr_bw_stack_rr
+            , `Failed to pass\nhearing screening` = th$hearing_stack_rr
+          ) |>
+          imap(~ data.frame(model = .y, pred = .x)) |>
+          reduce(rbind) |>
+          mutate(model = str_wrap(model, 20)) |>
+          mutate_at("model", \(x) factor(x, unique(x)))
+        , by = join_by(model)
+      ) |>
+      mutate(obs = intercept + slope * pred)
+    , size = 1
+  ) +
+  scale_color_manual(
+    "Model"
+    , values =
+      c("#3737c8ff", "#71c837ff", "#c83737ff", "#37abc8ff", "#916f6fff")
+  ) +
+  theme(
+    axis.title = element_text(size = 5)
+    , axis.text = element_text(size = 5)
+    , legend.title = element_text(size = 5)
+    , legend.text = element_text(size = 5)
+  )
+
+paper_calib_dist <-
+  c("#3737c8ff", "#71c837ff", "#c83737ff", "#37abc8ff", "#916f6fff") |>
+  `names<-`(levels(paper_calib$dist$data$model)) |>
+  imap(
+    ~ filter(paper_calib$dist$data, model == .y) |>
+      ggplot(aes(pred, n)) +
+      geom_col(fill = .x, na.rm = TRUE) +
+      facet_grid(obs ~ model, scales = "free_y") +
+      theme_classic() +
+      scale_x_continuous(
+        "Predicted probability"
+        , breaks = seq(0, 1, 0.1)
+        , limits = c(-0.1, 1.1)
+      ) +
+      scale_y_continuous("Freq. (n)", n.breaks = 3, trans = "log10") +
+      theme(
+        axis.title.x =
+          list(
+            element_blank()
+            , element_text(size = 5)
+          )[[ifelse(
+            which(levels(paper_calib$dist$data$model) %in% .y)
+            == length(levels(paper_calib$dist$data$model))
+            , 2, 1
+          )]]
+        , axis.text.x =
+          list(
+            element_blank()
+            , element_text(size = 5)
+          )[[ifelse(
+            which(levels(paper_calib$dist$data$model) %in% .y)
+            == length(levels(paper_calib$dist$data$model))
+            , 2, 1
+          )]]
+        , axis.title.y = element_text(size = 5)
+        , axis.text.y = element_text(size = 5)
+        , strip.text.x = element_blank()
+        , strip.text.y = element_text(size = 5)
+      )
+  )
+
+paper_calib_dist <-
+  ggarrange(
+    plotlist = paper_calib_dist
+    , nrow = length(paper_calib_dist), ncol = 1, heights = c(rep(1, 4), 1.5)
+  )
+```
+
+```{r Decision curve on paper, include=FALSE}
+paper_dca <-
+  list(
+    data =
+      list(
+        `Severe ROP` =
+          rop_severe_stack_eval_decision[[
+            "rop_severe_stack_rr"
+          ]]$test$plot$data
+        , `Moderate/severe BPD` =
+          bpd_moderate_severe_stack_eval_decision[[
+            "bpd_moderate_severe_stack_rf"
+          ]]$test$plot$data
+        , `EUGR-HC` =
+          eugr_hc_stack_eval_decision[[
+            "eugr_hc_stack_rr"
+          ]]$test$plot$data
+        , `EUGR-BW` =
+          eugr_bw_stack_eval_decision[[
+            "eugr_bw_stack_rr"
+          ]]$test$plot$data
+        , `Failed to pass hearing screening` =
+          hearing_stack_eval_decision[[
+            "hearing_stack_rr"
+          ]]$test$plot$data
+      ) |>
+      imap(~ mutate(.x, model = .y)) |>
+      reduce(rbind) |>
+      mutate(model = str_wrap(model, 20)) |>
+      mutate_at("model", \(x) factor(x, unique(x)))
+    , prevalence =
+      list(
+        `Severe ROP` =
+          rop_severe_stack_eval_decision[[
+            "rop_severe_stack_rr"
+          ]]$test$prevalence
+        , `Moderate/severe BPD` =
+          bpd_moderate_severe_stack_eval_decision[[
+            "bpd_moderate_severe_stack_rf"
+          ]]$test$prevalence
+        , `EUGR-HC` =
+          eugr_hc_stack_eval_decision[[
+            "eugr_hc_stack_rr"
+          ]]$test$prevalence
+        , `EUGR-BW` =
+          eugr_bw_stack_eval_decision[[
+            "eugr_bw_stack_rr"
+          ]]$test$prevalence
+        , `Failed to pass hearing screening` =
+          hearing_stack_eval_decision[[
+            "hearing_stack_rr"
+          ]]$test$prevalence
+      ) |>
+      imap(~ data.frame(prevalence = .x, model = .y)) |>
+      reduce(rbind) |>
+      mutate(model = str_wrap(model, 20)) |>
+      mutate_at("model", \(x) factor(x, unique(x)))
+  ) |>
+  reduce(left_join, by = join_by(model)) |>
+  mutate(treat_none = 0, treat_all = prevalence - 1 * th) |>
+  mutate(ref_nb = ifelse(treat_all > treat_none , treat_all, treat_none)) |>
+  mutate(residual_nb = nb - ref_nb) |>
+  ggplot(aes(th, nb, color = model)) +
+  geom_path(linewidth = 0.5, na.rm = TRUE) +
+  scale_x_continuous(
+    "Threshold"
+    , breaks = seq(0, 0.5, 0.1)
+    , limits = c(0, 0.5)
+  ) +
+  scale_y_continuous(
+    "Residual net benefit"
+    , breaks = seq(0, 0.3, 0.1)
+    , limits = c(0, 0.3)
+  ) +
+  scale_color_discrete("Model") +
+  theme_classic()
+
+paper_dca <-
+  paper_dca +
+  geom_point(
+    data =
+      paper_dca$data |>
+      left_join(
+        list(
+            `Severe ROP` = th$rop_severe_stack_rr
+            , `Moderate/severe\nBPD` = th$bpd_moderate_severe_stack_rf
+            , `EUGR-HC` = th$eugr_hc_stack_rr
+            , `EUGR-BW` = th$eugr_bw_stack_rr
+            , `Failed to pass\nhearing screening` = th$hearing_stack_rr
+          ) |>
+          imap(~ data.frame(model = .y, selected_th = .x)) |>
+          reduce(rbind) |>
+          mutate(model = str_wrap(model, 20)) |>
+          mutate_at("model", \(x) factor(x, unique(x)))
+        , by = join_by(model)
+      ) |>
+      filter(th == selected_th)
+    , size = 1
+  ) +
+  scale_color_manual(
+    "Model"
+    , values =
+      c("#3737c8ff", "#71c837ff", "#c83737ff", "#37abc8ff", "#916f6fff")
+  ) +
+  theme(
+    axis.title = element_text(size = 5)
+    , axis.text = element_text(size = 5)
+    , legend.title = element_text(size = 5)
+    , legend.text = element_text(size = 5)
+  )
+```
+
+```{r Evaluation on paper - plot, include=FALSE}
+paper_evaluation_plot <-
+    ggarrange(
+    ggarrange(
+      ggarrange(
+        ggarrange(
+          paper_calib_plot + theme(legend.position = "none"), NULL
+          , nrow = 1, ncol = 2, widths = c(2.125, 0.125)
+        )
+        , paper_calib_dist
+        , nrow = 2, ncol = 1, heights = c(1.75, 2.5)
+      )
+      , ggarrange(
+          NULL, paper_dca + theme(legend.position = "none"), NULL
+          , nrow = 1, ncol = 3, widths = c(0.2, 1.85, 0.2)
+        )
+      , paper_roc +
+        theme(
+          legend.position = "bottom"
+          , legend.title = element_blank()
+          , legend.text = element_text(size = 5)
+          , legend.key.height = unit(0.1, "in")
+        ) +
+        guides(
+          color = guide_legend(nrow = 3, byrow = TRUE)
+        )
+      , nrow = 3, ncol = 1, heights = c(1.75 + 2.5, 0.75, 1.75 + 0.65)
+      , labels = LETTERS[1:3], font.label = list(size = 7)
+    )
+    , ggarrange(
+        paper_stacked_ori_shap_feature_values$rop_severe_stack_rr |>
+          filter(str_detect(feature, "^Gest|^P[:alpha:]+ s|^Leu")) |>
+          mutate(feature = str_wrap(feature, 30)) |>
+          mutate(model = "Severe ROP") |>
+          paper_shap_beeswarm_plot(
+            1, Inf, seed, 0.75, "Expected value"
+            , point_size = 0.75, colorbar_height = 3
+          )
+        , paper_stacked_ori_shap_feature_values$bpd_moderate_severe_stack_rf |>
+          filter(str_detect(feature, "IMV|O2 [:alpha:]+ c")) |>
+          mutate(feature = str_wrap(feature, 30)) |>
+          mutate(model = "Moderate/severe BPD") |>
+          paper_shap_beeswarm_plot(
+            1, Inf, seed, 0.75, "Expected value"
+            , point_size = 0.75, colorbar_height = 3
+          )
+        , paper_stacked_ori_shap_feature_values$eugr_hc_stack_rr |>
+          filter(str_detect(feature, "^Gest|^Throm|^Inot")) |>
+          mutate(feature = str_wrap(feature, 30)) |>
+          mutate(model = "EUGR-HC") |>
+          paper_shap_beeswarm_plot(
+            1, Inf, seed, 0.75, "Expected value"
+            , point_size = 0.75, colorbar_height = 3
+          )
+        , paper_stacked_ori_shap_feature_values$eugr_bw_stack_rr |>
+          filter(str_detect(feature, "^Throm|expander|^Gest")) |>
+          mutate(feature = str_wrap(feature, 30)) |>
+          mutate(model = "EUGR-BW") |>
+          paper_shap_beeswarm_plot(
+            1, Inf, seed, 0.75, "Expected value"
+            , point_size = 0.75, colorbar_height = 3
+          )
+        , paper_stacked_ori_shap_feature_values$hearing_stack_rr |>
+          filter(str_detect(feature, "^Gest|^Throm|feeding")) |>
+          mutate(feature = str_wrap(feature, 30)) |>
+          mutate(model = "Failed to pass hearing screening") |>
+          paper_shap_beeswarm_plot(
+            1, Inf, seed, 0.75, "Expected value"
+            , point_size = 0.75, colorbar_height = 3
+          )
+        , paper_timing
+        , nrow = 6, ncol = 1, heights = c(0.98, 1.21, rep(0.98, 3), 2.25)
+        , labels = c(LETTERS[4], rep("", 4), LETTERS[5])
+        , font.label = list(size = 7)
+      )
+    , nrow = 1, ncol = 2, widths = c(2.25, 3.26181)
+  )
+```
+
+```{r Evaluation on paper - show, echo=FALSE, fig.height=7.4, fig.width=5.51181}
+paper_evaluation_plot
+```
+
+Figure 64. Evaluation of the best prediction models for: (A) calibration using test set; (B) clinical utility by decision curves using test set; (C) discrimination by ROC curves using test set; (D) explainability by SHAP beeswarm plots; and (E) best timing for each outcome and the required predictors. The color legend of panel C applies for panels A to C. The values 0 and 1 in panel A indicate negative and positive outcome, respectively. The points in panels A, B, and C respectively indicate true probabilities, residual net benefits, and specificities and sensitivities of the best model using the selected threshold. Panel D only shows predictors with the top-3 highest maximum SHAP values, as shown by numbers after the predictor names. AKI, acute kidney injury; BPD, bronchopulmonary dysplasia; EUGR, extrauterine growth restriction; EUGR-BW, EUGR by body weight; EUGR-HC, EUGR by head circumference; hs-PDA, hemodynamically-significant patent ductus arteriosus; IMV, invasive mechanical ventilation; IVH, intraventricular hemorrhage; PRBC, packed red blood cell; ROP, retinopathy of prematurity; SHAP, the Shapley additive explanation.
+
+```{r Identify loss-to-follow-up distribution, include=FALSE}
+loss_to_follow_up_dist <-
+  cleaned_data |>
+  select(id, ga_wk, death_age) |>
+  unique() |>
+  mutate(
+    set =
+      case_when(
+        id %in% train_id ~ "Training"
+        ,id %in% val_id ~ "Validation"
+        ,id %in% test_id ~ "Test"
+      )
+  ) |>
+  rbind(
+    cleaned_data_indep_test |>
+      select(id, ga_wk, death_age) |>
+      unique() |>
+      mutate(set = "Independent test")
+  ) |>
+  mutate(
+    set =
+      set |>
+      factor(c("Training", "Validation", "Test", "Independent test"))
+  ) |>
+  mutate(
+    death_age = 
+      case_when(
+        death_age <= 3 ~ "≤3"
+        , death_age > 3 & death_age <= 7 ~ ">3 to 7"
+        , death_age > 7 & death_age <= 14 ~ ">7 to 14"
+        , death_age > 14 & death_age <= 28 ~ ">14 to 28"
+        , death_age > 28 & death_age <= 42 ~ ">28 to 42"
+        , death_age > 42 ~ ">42"
+      )
+    , death_age =
+      death_age |>
+      factor(c("≤3", ">3 to 7", ">7 to 14", ">14 to 28", ">28 to 42", ">42"))
+  ) |>
+  arrange(death_age) |>
+  group_by(set) |>
+  mutate(total = n()) |>
+  ungroup() |>
+  group_by(set, total, death_age) |>
+  summarize(n = n(), .groups = "drop")
+```
+
+```{r Loss-to-follow-up samples per day category - create, include=FALSE}
+table25 <-
+  loss_to_follow_up_dist |>
+  select(death_age, set, n) |>
+  spread(set, n, fill = 0) |>
+  mutate(Modeling = Training + Validation + Test) |>
+  gather(set, n, -death_age) |>
+  mutate_at("set", \(x) factor(x, unique(x))) |>
+  group_by(set) |>
+  mutate(n = cumsum(n)) |>
+  ungroup() |>
+  spread(set, n, fill = 0) |>
+  rename(`Death age category` =  death_age)
+```
+
+```{r Loss-to-follow-up samples per day category - show, echo=FALSE}
+table25 |>
+  kable(
+    caption = "Table 25. Cumulative loss-to-follow-up samples per day category."
+    , format = kable_format
+  ) |>
+  kable_classic() |>
+  column_spec(seq(ncol(table25)), extra_css = "vertical-align:top;")
+```
+
+```{r Remaining samples per day dategory- create, include=FALSE}
+table26 <-
+  loss_to_follow_up_dist |>
+  select(death_age, set, n) |>
+  spread(set, n, fill = 0) |>
+  mutate(Modeling = Training + Validation + Test) |>
+  gather(set, n, -death_age) |>
+  left_join(
+    loss_to_follow_up_dist |>
+      select(set, total) |>
+      unique() |>
+      rbind(
+        loss_to_follow_up_dist |>
+          select(set, total) |>
+          unique() |>
+          filter(set != "Independent test") |>
+          mutate(set = "Modeling") |>
+          group_by(set) |>
+          summarize(total = sum(total))
+      )
+    , by = join_by(set)
+  ) |>
+  mutate_at("set", \(x) factor(x, unique(x))) |>
+  group_by(set) |>
+  mutate(remaining = total - cumsum(n)) |>
+  ungroup() |>
+  select(-n, -total) |>
+  spread(set, remaining, fill = 0) |>
+  rename(`Death age category` =  death_age)
+```
+
+```{r Remaining samples per day dategory- show, echo=FALSE}
+table26 |>
+  kable(
+    caption = "Table 26. Remaining samples per day category."
+    , format = kable_format
+  ) |>
+  kable_classic() |>
+  column_spec(seq(ncol(table26)), extra_css = "vertical-align:top;")
+```
+
+```{r Summary of predictive performance on paper - create, include=FALSE}
+table27 <-
+  cm_selected_time_summary |>
+  filter(!outcome %in% c("survive", "bpd")) |>
+  mutate(dataset = "Internal") |>
+  rbind(
+    cm_selected_time_summary_indep_test |>
+      filter(!outcome %in% c("survive", "bpd")) |>
+      mutate(dataset = "External")
+  ) |>
+  timing_selection_filter() |>
+  mutate(
+    avg =
+      ifelse(
+        metric == "F1", format(avg, digits = 2), round(avg)
+      )
+    , lb =
+      ifelse(
+        metric == "F1", format(lb, digits = 2), round(lb)
+      )
+    , ub =
+      ifelse(
+        metric == "F1", format(ub, digits = 2), round(ub)
+      )
+  ) |>
+  unite(ci, lb, ub, sep = ", ") |>
+  mutate_at("ci", \(x) paste0("(", x, ")")) |>
+  unite(summary, avg, ci, sep = " ") |>
+  mutate(
+    outcome = factor(outcome, unique(outcome))
+    , timing = as.character(timing)
+    , timing = factor(timing, unique(timing))
+    , metric = factor(metric, c("AUC-ROC", "TPR", "PPV", "F1", "TNR", "NPV"))
+  ) |>
+  spread(metric, summary) |>
+  left_join(
+    reduce(imap(th, ~ data.frame(model = .y, TH = .x)), rbind) |>
+      filter(!str_detect(model, "baseline")) |>
+      mutate_at("model", str_remove_all, "_stack_[:alpha:]*") |>
+      rename(outcome = model)
+    , by = join_by(outcome)
+  ) |>
+  select(outcome, timing, TH, dataset, everything()) |>
+  left_join(
+    paper_new_cat_colname_cat |>
+      select(outcome = old_colname, new_colname) |>
+      unique()
+    , by = join_by(outcome)
+  ) |>
+  mutate(outcome = new_colname) |>
+  select(-new_colname) |>
+  mutate(TH = ifelse(duplicated(paste0(outcome, timing, TH)), "", TH)) |>
+  mutate(timing = as.character(timing)) |>
+  mutate(timing = ifelse(duplicated(paste0(outcome, timing)), "", timing)) |>
+  mutate(outcome = ifelse(duplicated(outcome), "", outcome)) |>
+  mutate(
+    F1 = ifelse(str_detect(F1, "NaN"), "N/A*", F1)
+    , TNR = ifelse(str_detect(TNR, "NaN"), "N/A†", TNR)
+    , TPR = ifelse(str_detect(TPR, "NaN"), "N/A‡", TPR)
+    , PPV = ifelse(str_detect(PPV, "NaN"), "N/A§", PPV)
+    , NPV = ifelse(str_detect(NPV, "NaN"), "N/A¶", NPV)
+  ) |>
+  select(-timing, -TH) |>
+  rename(Outcome = outcome, Dataset = dataset)
+```
+
+```{r Summary of predictive performance on paper - show, echo=FALSE}
+table27 |>
+  kable(
+    caption =
+      "Table 27. Predictive performance using test set at particular time."
+    , format = kable_format
+  ) |>
+  footnote(
+    paste0(
+      "BPD, bronchopulmonary dysplasia; "
+      , "EUGR, extrauterine growth restriction; "
+      , "EUGR-BW, EUGR by body weight; "
+      , "EUGR-HC, EUGR by head circumference; "
+      , "F1, the F1-score; "
+      , "ROP, retinopathy of prematurity; "
+      , "TNR, true negative rate (specificity); "
+      , "TPR, true positive rate (sensitivity/recall); "
+      , "PPV, positive predictive value (precision); "
+      , "NPV, negative predictive value. "
+    )
+  ) |>
+  kable_classic() |>
+  column_spec(1:7, extra_css = "vertical-align:top;")
+```
 
 
 
