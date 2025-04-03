@@ -1,7 +1,7 @@
 arrange_eval_plot <-
   function(
     eval_obj
-    , shap_feature_values
+    , shap_beeswarm_plot_obj
     , threshold = 0.5
     , dc_xmin = 0
     , dc_xmax = 1
@@ -10,8 +10,6 @@ arrange_eval_plot <-
     , dc_ymax = 1
     , dc_yby = 0.01
     , dc_ta_angle = -50
-    , seed
-    , transparency = 0.5
     , shap_height = 2.5
   ){
     
@@ -30,12 +28,7 @@ arrange_eval_plot <-
         , widths = c(5, 4, 6)
         , labels = LETTERS[1:3]
       )
-      , shap_feature_values |>
-        filter(feature != "expected_value") |>
-        group_by(feature) |>
-        mutate(feature_value = scale(feature_value)) |>
-        ungroup() |>
-        shap_beeswarm_plot(seed, transparency)
+      , shap_beeswarm_plot_obj
       , nrow = 2
       , ncol = 1
       , heights = c(4, shap_height)
