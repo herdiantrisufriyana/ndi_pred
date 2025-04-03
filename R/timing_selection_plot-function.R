@@ -39,6 +39,7 @@ timing_selection_plot <-
         , ub = ifelse(metric == "F1", ub, ub / 100)
       ) |>
       mutate_at(c("outcome", "set"), \(x) factor(x, unique(x))) |>
+      mutate(timing = str_replace_all(timing, "t_", "Day ")) |>
       mutate_at(c("timing"), \(x) factor(x, rev(unique(x)))) |>
       mutate_at(
         c("metric"), \(x) factor(x, c("TPR", "PPV", "F1", "TNR", "NPV"))
