@@ -1,6 +1,6 @@
 ---
-title: "Neonatal outcomes AI prediction using multimodal trajectory database"
-author: "Herdiantri Sufriyana, Yung-Chieh Lin, Chien-Jung Ho, Ting-Chun Yeh, Chao-Ching Huang, Emily Chia-Yu Su"
+title: "Early prediction of neonatal outcomes among very preterm infants using multivariable trajectories: Development and validation"
+author: "Yung-Chieh Lin, Herdiantri Sufriyana, Chien-Jung Ho, Ting-Chun Yeh, Chao-Ching Huang, Emily Chia-Yu Su"
 date: "2024-09-10"
 output: html_document
 ---
