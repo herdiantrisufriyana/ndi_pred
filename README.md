@@ -1,4 +1,8 @@
-# Neonatal Outcomes AI Prediction using Multimodal Trajectory Database
+# Early prediction of neonatal outcomes among very preterm infants using multivariable trajectories: Development and validation
+
+## Vignette
+
+[Progress report](https://herdiantrisufriyana.github.io/ndi_pred/index.html)
 
 ## System requirements
 
@@ -53,10 +57,6 @@ jupyter-lab --ip=0.0.0.0 --no-browser --allow-root
 ```
 
 Click a link in the results to open jupyter lab in a browser. Change port number in the link, accordingly, if it is already used by other applications.
-
-## Vignette
-
-[Progress report](https://herdiantrisufriyana.github.io/ndi_pred/index.html)
 
 
 
