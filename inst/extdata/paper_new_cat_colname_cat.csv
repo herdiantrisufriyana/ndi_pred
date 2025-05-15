@@ -42,8 +42,8 @@ gdm,GDM,1-yes,Yes,Prenatal,Pregnancy care
 hearing,Failed to pass hearing screening,0-passed,No,Discharge,Failed to pass hearing screening
 hearing,Failed to pass hearing screening,1-failed,Yes,Discharge,Failed to pass hearing screening
 hearing,Failed to pass hearing screening,NA,Missing,Discharge,Failed to pass hearing screening
-ivf,IVF,0-no,No,Prenatal,Pregnancy care
-ivf,IVF,1-yes,Yes,Prenatal,Pregnancy care
+ivf,ART,0-no,No,Prenatal,Pregnancy care
+ivf,ART,1-yes,Yes,Prenatal,Pregnancy care
 multiple_gestation,Multiple gestation,0-no,No,Prenatal,Pregnancy care
 multiple_gestation,Multiple gestation,1-yes,Yes,Prenatal,Pregnancy care
 pe,Preeclampsia,0-no,No,Prenatal,Pregnancy care
