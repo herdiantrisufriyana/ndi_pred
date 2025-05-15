@@ -9375,7 +9375,6 @@ paper_eval_rop_severe <-
     , model_name = "RR"
     , timing = "t_14"
     , ghi = c(11, 7.5, 1.5)
-    , ghi_label = c("", LETTERS[9:10])
   )
 ```
 
@@ -10411,6 +10410,149 @@ paper_evaluation_plot
 ```
 
 Figure 64. Evaluation of the best prediction models for: (A) calibration using test set; (B) clinical utility by decision curves using test set; (C) discrimination by ROC curves using test set; (D) explainability by SHAP beeswarm plots; and (E) best timing for each outcome and the required predictors. The color legend of panel C applies for panels A to C. The values 0 and 1 in panel A indicate negative and positive outcome, respectively. The points in panels A, B, and C respectively indicate true probabilities, residual net benefits, and specificities and sensitivities of the best model using the selected threshold. Panel D only shows predictors with the top-3 highest maximum SHAP values, as shown by numbers after the predictor names. AKI, acute kidney injury; BPD, bronchopulmonary dysplasia; EUGR, extrauterine growth restriction; EUGR-BW, EUGR by body weight; EUGR-HC, EUGR by head circumference; hs-PDA, hemodynamically-significant patent ductus arteriosus; IMV, invasive mechanical ventilation; IVH, intraventricular hemorrhage; PRBC, packed red blood cell; ROP, retinopathy of prematurity; SHAP, the Shapley additive explanation.
+
+```{r Evaluation on paper 2 - plot, include=FALSE}
+paper_evaluation_plot2 <-
+  ggarrange(
+    ggarrange(
+      ggarrange(
+        NULL, paper_dca + theme(legend.position = "none"), NULL
+        , nrow = 1, ncol = 3, widths = c(0.2, 1.85, 0.2)
+      )
+      , paper_roc +
+        theme(
+          legend.position = "bottom"
+          , legend.title = element_blank()
+          , legend.text = element_text(size = 5)
+          , legend.key.height = unit(0.1, "in")
+        ) +
+        guides(
+          color = guide_legend(nrow = 3, byrow = TRUE)
+        )
+      , nrow = 2, ncol = 1, heights = c(0.75 + 0.35, 1.75 + 0.65)
+      , labels = LETTERS[1:2], font.label = list(size = 7)
+    )
+    , paper_timing
+    , nrow = 1, ncol = 2, widths = c(2.25, 3.26181)
+    , labels = c("", LETTERS[3]), font.label = list(size = 7)
+  )
+```
+
+```{r Evaluation on paper 2 - show, echo=FALSE, fig.height=3.5, fig.width=5.51181}
+paper_evaluation_plot2
+```
+
+Figure 65. Evaluation of the best prediction models for: (A) clinical utility by decision curves using test set; (B) discrimination by ROC curves using test set; and (C) best timing for each outcome and the required predictors. The color legend of panel B applies for panels A to B. The points in panels A and B respectively indicate residual net benefits and specificities and sensitivities of the best model using the selected threshold. AKI, acute kidney injury; BPD, bronchopulmonary dysplasia; EUGR, extrauterine growth restriction; EUGR-BW, EUGR by body weight; EUGR-HC, EUGR by head circumference; hs-PDA, hemodynamically-significant patent ductus arteriosus; IMV, invasive mechanical ventilation; IVH, intraventricular hemorrhage; PRBC, packed red blood cell; ROP, retinopathy of prematurity.
+
+```{r Severe ROP SHAPbee - show, echo=FALSE, fig.height=2, fig.width=5.51181}
+paper_stacked_ori_shap_feature_values$rop_severe_stack_rr |>
+  inner_join(
+    paper_stacked_ori_shap_feature_values$rop_severe_stack_rr |>
+      filter(feature != "Expected value") |>
+      group_by(feature) |>
+      summarize(max_shap_value = max(shap_value)) |>
+      arrange(desc(max_shap_value)) |>
+      slice(seq(14)) |>
+      select(-max_shap_value)
+    , by = join_by(feature)
+  ) |>
+  mutate(model = "Severe ROP") |>
+  paper_shap_beeswarm_plot(
+    1, Inf, seed, 0.75, "Expected value"
+    , point_size = 0.75, colorbar_height = 6
+  ) +
+  theme(strip.text = element_blank())
+```
+
+Figure 66. Severe ROP prediction model explainability by SHAP beeswarm plot. Only predictors with significant positive impact on the risk are shown. See the impacts of all predictors in Figure 57. AKI, acute kidney injury; IMV, invasive mechanical ventilation; IVH; intraventricular hemorrhage; PRBC, packed red blood cell; ROP, retinopathy of prematurity; SHAP, the Shapley additive explanation; SIP, spontaneous intestinal perforation.
+
+```{r Mod/sev BPD SHAPbee - show, echo=FALSE, fig.height=1.5, fig.width=5.51181}
+paper_stacked_ori_shap_feature_values$bpd_moderate_severe_stack_rf |>
+  inner_join(
+    paper_stacked_ori_shap_feature_values$bpd_moderate_severe_stack_rf |>
+      filter(feature != "Expected value") |>
+      group_by(feature) |>
+      summarize(max_shap_value = max(shap_value)) |>
+      arrange(desc(max_shap_value)) |>
+      slice(seq(7)) |>
+      select(-max_shap_value)
+    , by = join_by(feature)
+  ) |>
+  mutate(model = "Moderate/severe BPD") |>
+  paper_shap_beeswarm_plot(
+    1, Inf, seed, 0.75, "Expected value"
+    , point_size = 0.75, colorbar_height = 5
+  ) +
+  theme(strip.text = element_blank())
+```
+
+Figure 67. Moderate/severe BPD prediction model explainability by SHAP beeswarm plot. Only predictors with significant positive impact on the risk are shown. See the impacts of all predictors in Figure 58. IMV, invasive mechanical ventilation; SHAP, the Shapley additive explanation.
+
+```{r EUGR-HC SHAPbee - show, echo=FALSE, fig.height=2.5, fig.width=5.51181}
+paper_stacked_ori_shap_feature_values$eugr_hc_stack_rr |>
+  inner_join(
+    paper_stacked_ori_shap_feature_values$eugr_hc_stack_rr |>
+      filter(feature != "Expected value") |>
+      group_by(feature) |>
+      summarize(max_shap_value = max(shap_value)) |>
+      arrange(desc(max_shap_value)) |>
+      slice(seq(18)) |>
+      select(-max_shap_value)
+    , by = join_by(feature)
+  ) |>
+  mutate(model = "EUGR-HC") |>
+  paper_shap_beeswarm_plot(
+    1, Inf, seed, 0.75, "Expected value"
+    , point_size = 0.75, colorbar_height = 6
+  ) +
+  theme(strip.text = element_blank())
+```
+
+Figure 68. EUGR-HC prediction model explainability by SHAP beeswarm plot. Only predictors with significant positive impact on the risk are shown. See the impacts of all predictors in Figure 59. AKI, acute kidney injury; EUGR-HC, extrauterine growth restriction by head circumference; IMV, invasive mechanical ventilation; IVH; intraventricular hemorrhage; SHAP, the Shapley additive explanation; SIP, spontaneous intestinal perforation.
+
+```{r EUGR-BW SHAPbee - show, echo=FALSE, fig.height=2, fig.width=5.51181}
+paper_stacked_ori_shap_feature_values$eugr_bw_stack_rr |>
+  inner_join(
+    paper_stacked_ori_shap_feature_values$eugr_bw_stack_rr |>
+      filter(feature != "Expected value") |>
+      group_by(feature) |>
+      summarize(max_shap_value = max(shap_value)) |>
+      arrange(desc(max_shap_value)) |>
+      slice(seq(12)) |>
+      select(-max_shap_value)
+    , by = join_by(feature)
+  ) |>
+  mutate(model = "EUGR-BW") |>
+  paper_shap_beeswarm_plot(
+    1, Inf, seed, 0.75, "Expected value"
+    , point_size = 0.75, colorbar_height = 6
+  ) +
+  theme(strip.text = element_blank())
+```
+
+Figure 69. EUGR-BW prediction model explainability by SHAP beeswarm plot. Only predictors with significant positive impact on the risk are shown. See the impacts of all predictors in Figure 60. AKI, acute kidney injury; EUGR-BW, extrauterine growth restriction by body weight; IMV, invasive mechanical ventilation; SHAP, the Shapley additive explanation.
+
+```{r Failed hearing SHAPb - show, echo=FALSE, fig.height=1.5, fig.width=5.51181}
+paper_stacked_ori_shap_feature_values$hearing_stack_rr |>
+  inner_join(
+    paper_stacked_ori_shap_feature_values$hearing_stack_rr |>
+      filter(feature != "Expected value") |>
+      group_by(feature) |>
+      summarize(max_shap_value = max(shap_value)) |>
+      arrange(desc(max_shap_value)) |>
+      slice(seq(6)) |>
+      select(-max_shap_value)
+    , by = join_by(feature)
+  ) |>
+  mutate(model = "Failed to pass hearing screening") |>
+  paper_shap_beeswarm_plot(
+    1, Inf, seed, 0.75, "Expected value"
+    , point_size = 0.75, colorbar_height = 4
+  ) +
+  theme(strip.text = element_blank())
+```
+
+Figure 70. Failed-to-pass-hearing-test prediction model explainability by SHAP beeswarm plot. Only predictors with significant positive impact on the risk are shown. See the impacts of all predictors in Figure 61. SHAP, the Shapley additive explanation.
 
 ```{r Identify loss-to-follow-up distribution, include=FALSE}
 loss_to_follow_up_dist <-
